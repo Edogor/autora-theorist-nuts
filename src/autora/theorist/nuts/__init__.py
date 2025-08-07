@@ -183,7 +183,7 @@ class NutsTheorists(BaseEstimator):
         except Exception:
             return -float("inf") 
 
-    def _tournoment(self, population_with_scores):
+    def _tournament(self, population_with_scores):
         """
         Selects a single parent from the population using tournament selection.
 
