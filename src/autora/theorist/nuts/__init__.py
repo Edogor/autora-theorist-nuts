@@ -78,6 +78,33 @@ class NutsTheorists(BaseEstimator):
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
         
+        import numpy as np
+
+    def tree_to_function(tree):
+        """
+        Converts a nested list expression like ['+', 'S1', ['*', 'S2', 'c']]
+        into a Python function that can be evaluated with input data.
+        """
+
+        def _convert(node):
+            if isinstance(node, list):
+                if len(node) == 2:  # Unary op
+                    return f"{node[0]}({_convert(node[1])})"
+                elif len(node) == 3:  # Binary op
+                    return f"({_convert(node[1])} {node[0]} {_convert(node[2])})"
+            else:
+                return str(node)
+
+        expr = _convert(tree)
+
+        return lambda cond: eval(expr, {
+            "np": np,
+            "S1": cond[:, 0],
+            "S2": cond[:, 1],
+            "c": 1.0
+        })
+
+    
     def fitness_function(expression_func, conditions, observations):
     
         try:
