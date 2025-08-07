@@ -272,7 +272,128 @@ class NutsTheorists(BaseEstimator):
     def fit(self,
         conditions: Union[pd.DataFrame, np.ndarray],
         observations: Union[pd.DataFrame, np.ndarray]):
-        pass
+        import random
+import copy
+import numpy as np
+import pandas as pd
+from sklearn.base import BaseEstimator
+from sklearn.metrics import mean_squared_error
+
+class GeneticTheorist(BaseEstimator):
+    """
+    A theorist that uses a Genetic Algorithm to discover symbolic equations.
+    """
+    def __init__(self, population_size=100, n_generations=50, mutation_rate=0.1, tournament_size=3, elitism=2, max_depth=4):
+        self.population_size = population_size
+        self.n_generations = n_generations
+        self.mutation_rate = mutation_rate
+        self.tournament_size = tournament_size
+        self.elitism = elitism
+        self.max_depth = max_depth
+
+        self.best_equation_ = None
+        self.best_fitness_ = -float('inf')
+        self.UNARY_OPS = ['np.log', 'np.exp']
+        self.BINARY_OPS = ['+', '-', '*', '/']
+        self.TERMINALS = []
+
+    # --- HELPER METHODS (Place your actual implementations here) ---
+
+    def _create_random_tree(self, max_depth):
+        # Your implementation from before
+        if max_depth == 0 or random.random() < 0.2:
+            return random.choice(self.TERMINALS)
+        op = random.choice(self.UNARY_OPS + self.BINARY_OPS)
+        if op in self.UNARY_OPS:
+            return [op, self._create_random_tree(max_depth - 1)]
+        else:
+            return [op, self._create_random_tree(max_depth - 1), self._create_random_tree(max_depth - 1)]
+
+    def _get_fitness(self, tree, X, y):
+        # This is a placeholder for your teammate's function.
+        # It should convert the tree to a callable function, use curve_fit,
+        # and return the negative MSE.
+        try:
+            # A dummy calculation for demonstration
+            if 'S1' in X.columns:
+                pred = X['S1'] * 2 + (X['S2'] if 'S2' in X.columns else 0)
+                mse = mean_squared_error(y, pred)
+                return -mse
+            return -1e9
+        except:
+            return -float('inf')
+
+    def _tournament_selection(self, population_with_scores):
+        tournament = random.sample(population_with_scores, self.tournament_size)
+        winner = max(tournament, key=lambda item: item[1])
+        return winner[0]
+
+    def _crossover(self, parent1, parent2):
+        # Using a simplified crossover for demonstration.
+        # A real implementation would swap random nodes.
+        return copy.deepcopy(random.choice([parent1, parent2]))
+
+    def _mutate(self, tree):
+        if random.random() < self.mutation_rate:
+            return self._create_random_tree(max_depth=2)
+        return tree
+
+    # --- THE MAIN FIT FUNCTION ---
+
+    def fit(self, conditions: pd.DataFrame, observations: pd.DataFrame):
+        """
+        Runs the genetic algorithm to find the best equation.
+        """
+        # 1. INITIALIZATION (Happens once)
+        # a. Adapt terminals to the specific problem's data
+        self.TERMINALS = list(conditions.columns) + ['c']
+        y_true = observations.values.ravel()
+
+        # b. Create the initial random population (Generation 0)
+        population = [self._create_random_tree(self.max_depth) for _ in range(self.population_size)]
+
+        # --- 2. THE MAIN EVOLUTION LOOP ---
+        for generation in range(self.n_generations):
+            # a. EVALUATION: Score every individual in the current population.
+            pop_with_scores = []
+            for tree in population:
+                fitness = self._get_fitness(tree, conditions, y_true)
+                pop_with_scores.append((tree, fitness))
+
+            # b. TRACK THE BEST: Sort by fitness and check for a new best-ever solution.
+            pop_with_scores.sort(key=lambda item: item[1], reverse=True)
+            
+            if pop_with_scores[0][1] > self.best_fitness_:
+                self.best_fitness_ = pop_with_scores[0][1]
+                self.best_equation_ = pop_with_scores[0][0]
+                print(f"Gen {generation+1}: New best fitness = {self.best_fitness_:.4f}")
+
+            # c. REPRODUCTION: Create the next generation's population.
+            new_population = []
+
+            # Elitism: The top individuals pass directly to the next generation.
+            elites = [tree for tree, score in pop_with_scores[:self.elitism]]
+            new_population.extend(elites)
+
+            # Crossover & Mutation: Fill the rest of the population.
+            while len(new_population) < self.population_size:
+                parent1 = self._tournament_selection(pop_with_scores)
+                parent2 = self._tournament_selection(pop_with_scores)
+                
+                child = self._crossover(parent1, parent2)
+                child = self._mutate(child)
+                
+                new_population.append(child)
+
+            # d. REPLACEMENT: The new generation becomes the current population.
+            population = new_population
+
+        print("\nEvolution finished.")
+        print(f"Best equation found: {self.best_equation_}")
+        print(f"Best fitness (-MSE): {self.best_fitness_}")
+        
+        return self
+
 
     def predict(self,
         conditions: Union[pd.DataFrame, np.ndarray]) -> Union[pd.DataFrame, np.ndarray]:
