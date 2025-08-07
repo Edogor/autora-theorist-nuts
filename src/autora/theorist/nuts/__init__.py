@@ -174,7 +174,15 @@ class NutsTheorists(BaseEstimator):
     def fit(self,
             conditions: Union[pd.DataFrame, np.ndarray],
             observations: Union[pd.DataFrame, np.ndarray]):
-        pass
+        self.TERMINALS = list(conditions.columns) + ['c']
+        generation_0 = [self._create_random_tree() for _ in range(self.population_size)]
+
+        for gen in range(self.n_generation):
+            print(f"-> Starting Generation {generation_0 + 1}/{self.n_generations}")
+            pop_with_scores = []
+            for tree in generation_0:
+                
+
 
     def predict(self,
                 conditions: Union[pd.DataFrame, np.ndarray]) -> Union[pd.DataFrame, np.ndarray]:
