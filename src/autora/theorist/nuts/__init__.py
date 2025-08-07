@@ -176,13 +176,46 @@ class NutsTheorists(BaseEstimator):
         return new_population
      
         
-    def fitness_function(self, expression_func, conditions, observations):
+    def tree_to_function(tree):
+        """
+        Converts a nested list expression like ['+', 'S1', ['*', 'S2', 'c']]
+        into a Python function that can be evaluated with input data.
+        """
+#hey
+
+        def _convert(node):
+            if isinstance(node, list):
+                if len(node) == 2:  # Unary op
+                    return f"{node[0]}({_convert(node[1])})"
+                elif len(node) == 3:  # Binary op
+                    return f"({_convert(node[1])} {node[0]} {_convert(node[2])})"
+            else:
+                return str(node)
+
+        expr = _convert(tree)
+
+        return lambda cond: eval(expr, {
+            "np": np,
+            "S1": cond[:, 0],
+            "S2": cond[:, 1],
+            "c": 1.0
+        })
+
     
+    def fitness_function(self, expression_func, conditions, observations):
         try:
             preds = expression_func(conditions)
             return mean_squared_error(observations, preds)
         except Exception:
             return -float("inf") 
+
+   def append_tree_score(tree, mse):
+        if not hasattr(append_tree_score, "result_list"):
+            append_tree_score.result_list = []  # initialize list once
+
+        append_tree_score.result_list.append((tree, mse))
+        return append_tree_score.result_list
+
 
     def _tournament(self, population_with_scores):
         """
