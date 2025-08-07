@@ -105,7 +105,6 @@ class NutsTheorists(BaseEstimator):
 
     
     def fitness_function(expression_func, conditions, observations):
-    
         try:
             preds = expression_func(conditions)
             return -mean_squared_error(observations, preds)
