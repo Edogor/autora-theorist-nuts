@@ -1,6 +1,8 @@
 # NOTE:
 # max_depth
 # n_generation
+# TODO:
+# different values for constant (random ?)
 
 """
 Example Theorist
@@ -24,6 +26,7 @@ class NutsTheorists(BaseEstimator):
         self.n_generation = n_generation
         self.mutation_rate = mutation_rate
         self.tournament_size = tournament_size
+        self.elitism = 2  # Number of best trees to carry over unchanged
 
         #Attributes to store the final result
         self.best_equation = None
@@ -32,7 +35,8 @@ class NutsTheorists(BaseEstimator):
         self.result_list = []
         self.UNARY_OPS = ['np.log', 'np.exp']
         self.BINARY_OPS = ['+', '-', '*', '/', 'np.power']
-        self.TERMINALS = ['S1', 'S2', 'c']
+        self.TERMINALS = ['c']
+
 
     def _create_random_tree(self, max_depth = 3):
         """
@@ -141,7 +145,7 @@ class NutsTheorists(BaseEstimator):
         return tree, mse
 
 
-    def generate_next_generation(self, top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
+    def generate_next_generation(self, top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=10):
         print("next generation")
         """
         Generate the next generation from top-performing trees.
@@ -156,16 +160,32 @@ class NutsTheorists(BaseEstimator):
         Returns:
             list: New generation of equation trees.
         """
+        def get_random_subtree(tree):
+            """
+            Returns a randomly selected subtree, its parent, and index in parent.
+            """
+            candidates = []
 
-        def crossover(self, tree1, tree2):
+            def collect_subtrees(node, parent=None, idx=None):
+                if isinstance(node, list):
+                    candidates.append((node, parent, idx))
+                    for i, child in enumerate(node[1:], 1):
+                        collect_subtrees(child, node, i)
+
+            collect_subtrees(tree)
+            if not candidates:
+                return tree, None, None
+            return random.choice(candidates)
+
+        def crossover(tree1, tree2):
             print("Crossover between trees:")
             print(tree1)
             print(tree2)
-            def get_random_subtree(tree):
-                if not isinstance(tree, list):
-                    return tree, None, None
-                idx = random.randint(1, len(tree)-1)
-                return tree[idx], tree, idx
+#            def get_random_subtree(tree):
+#                if not isinstance(tree, list):
+#                    return tree, None, None
+#                idx = random.randint(1, len(tree)-1)
+#                return tree[idx], tree, idx
 
             t1 = copy.deepcopy(tree1)
             t2 = copy.deepcopy(tree2)
@@ -178,7 +198,7 @@ class NutsTheorists(BaseEstimator):
 
             return t1, t2
 
-        def mutate(self, tree):
+        def mutate(tree):
             print("Mutating tree:")
             def recursive_mutate(node, depth=0):
                 if not isinstance(node, list):
@@ -249,28 +269,26 @@ class NutsTheorists(BaseEstimator):
         return self.result_list
 
 
-    def _tournament(self, population_with_scores):
+    def _tournament(self, population_with_scores, k=50):
         """
-        Selects a single parent from the population using tournament selection.
+        Selects the top-k individuals from the population using tournament selection.
 
         Args:
-            population_with_scores (list): A list of tuples, where each tuple is
-                                        (tree, mse_score).
+            population_with_scores (list): List of tuples (tree, mse_score)
+            k (int): Number of top individuals to return
 
         Returns:
-            list: The tree of the winning individual, who will be a parent.
+            list: List of top-k (tree, mse_score) tuples
         """
-        # 1. Randomly select individuals for the tournament.
-        tournament_entrants = random.sample(population_with_scores, self.tournament_size)
+        # 1. Randomly select individuals for the tournament
+        tournament_entrants = random.sample(population_with_scores, min(len(population_with_scores), self.tournament_size * k))
 
-        # 2. Find the winner of the tournament.
-        # The winner is the one with the minimum MSE score.
-        # The `key=lambda item: item[1]` tells the `min` function to look at the second element of each tuple (the mse_score) for the comparison.
-        winner = min(tournament_entrants, key=lambda item: item[1])
+        # 2. Sort by MSE (ascending = better)
+        sorted_entrants = sorted(tournament_entrants, key=lambda item: item[1])
 
-        # 3. Return the winner's tree.
-        # The `winner` variable is a tuple like (['+', 'S1', 'c'], 0.123), so we return the first element, which is the equation tree itself.
-        return winner[0]
+        # 3. Return top-k (tree, mse_score) pairs
+        return sorted_entrants[:k]
+
 
     def fit(self, conditions: pd.DataFrame, observations: pd.DataFrame):
         """
@@ -289,46 +307,53 @@ class NutsTheorists(BaseEstimator):
 
         # b. Create the initial random population (Generation 0)
         population = [self._create_random_tree(5) for _ in range(self.population_size)]
-
+        self.initial_population = population.copy()
         # --- 2. THE MAIN EVOLUTION LOOP ---
         for generation in range(self.n_generation):
             # a. EVALUATION: Score every individual in the current population.
             pop_with_scores = []
             for tree in population:
-                fitness = self._get_fitness(tree, conditions, y_true)
+                #self, tree, conditions, observations, constant_value=1.0)
+                tree, fitness = self._evaluate_tree_mse(tree, conditions, observations, constant_value=1.0)
                 pop_with_scores.append((tree, fitness))
 
             # b. TRACK THE BEST: Sort by fitness and check for a new best-ever solution.
-            pop_with_scores.sort(key=lambda item: item[1], reverse=True)
+            # best_trees = self._tournament(pop_with_scores)
+            top_k = self._tournament(pop_with_scores, k=50)
+            top_k_trees = [tree for tree, _ in top_k]
+            population = self.generate_next_generation(top_k_trees, pop_size=self.population_size)
+
+            #pop_with_scores.sort(key=lambda item: item[1], reverse=True)
             
-            if pop_with_scores[0][1] > self.best_fitness_:
-                self.best_fitness_ = pop_with_scores[0][1]
-                self.best_equation_ = pop_with_scores[0][0]
-                print(f"Gen {generation+1}: New best fitness = {self.best_fitness_:.4f}")
+            #if pop_with_scores[0][1] > self.best_fitness:
+             #   self.best_fitness = pop_with_scores[0][1]
+              #  self.best_equation_ = pop_with_scores[0][0]
+               # print(f"Gen {generation+1}: New best fitness = {self.best_fitness:.4f}")
 
             # c. REPRODUCTION: Create the next generation's population.
-            new_population = []
 
-            # Elitism: The top individuals pass directly to the next generation.
-            elites = [tree for tree, score in pop_with_scores[:self.elitism]]
-            new_population.extend(elites)
 
-            # Crossover & Mutation: Fill the rest of the population.
-            while len(new_population) < self.population_size:
-                parent1 = self._tournament_selection(pop_with_scores)
-                parent2 = self._tournament_selection(pop_with_scores)
-                
-                child = self._crossover(parent1, parent2)
-                child = self._mutate(child)
-                
-                new_population.append(child)
 
-            # d. REPLACEMENT: The new generation becomes the current population.
-            population = new_population
+#            # Crossover & Mutation: Fill the rest of the population.
+#            while len(new_population) < self.population_size:
+#                parent1 = self._tournament(pop_with_scores)
+#                parent2 = self._tournament(pop_with_scores)
+#                
+#                child = self.crossover(parent1, parent2)
+#                child = self._mutate(child)
+#                
+#                new_population.append(child)
+
+#            # d. REPLACEMENT: The new generation becomes the current population.
+#            population = new_population
+        best_equation = top_k[0][0]
+        best_fitness = top_k[0][1]
+        self.best_equation = self._tree_translate(best_equation)
+        self.best_fitness = best_fitness
 
         print("\nEvolution finished.")
-        print(f"Best equation found: {self.best_equation_}")
-        print(f"Best fitness (-MSE): {self.best_fitness_}")
+        print(f"Best equation found: {self.best_equation}")
+        print(f"Best fitness (-MSE): {self.best_fitness}")
         
         return self
 
@@ -341,10 +366,19 @@ class NutsTheorists(BaseEstimator):
             conditions = pd.DataFrame(conditions, columns=self.var_names)
 
         eq_str = self._tree_translate(self.best_equation)
-        func = self._translate_tree_to_callable(eq_str, self.var_names, constant_value=self.best_params.get("c", 1.0))
+        func = self._translate_tree_to_callable(eq_str, self.var_names, constant_value=1.0)
 
         preds = np.array([func(*row) for row in conditions.values]).reshape(-1, 1)
         return preds
+    
+    def print_eqn(self):
+        if self.best_equation is None:
+            print("No equation available. Did you forget to call fit()?")
+            return
+        
+        eq_str = self._tree_translate(self.best_equation)
+        print(f"Best equation: {eq_str}")
+        return eq_str
 
 if __name__ == "__main__":
     # Example usage of the NutsTheorists class
