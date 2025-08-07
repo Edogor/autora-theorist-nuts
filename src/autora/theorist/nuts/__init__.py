@@ -6,7 +6,7 @@ import random
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
-
+from sklearn.metrics import mean_squared_error
 
 
 class NutsTheorists(BaseEstimator):
@@ -78,6 +78,14 @@ class NutsTheorists(BaseEstimator):
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
         
+    def fitness_function(expression_func, conditions, observations):
+    
+        try:
+            preds = expression_func(conditions)
+            return -mean_squared_error(observations, preds)
+        except Exception:
+            return -float("inf") 
+
     def _tournoment(self, population_with_scores):
         """
         Selects a single parent from the population using tournament selection.
