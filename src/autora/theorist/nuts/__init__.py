@@ -111,6 +111,14 @@ class NutsTheorists(BaseEstimator):
         except Exception:
             return -float("inf") 
 
+    def append_tree_score(tree, mse):
+        if not hasattr(append_tree_score, "result_list"):
+            append_tree_score.result_list = []  # initialize list once
+
+        append_tree_score.result_list.append((tree, mse))
+        return append_tree_score.result_list
+
+
     def _tournoment(self, population_with_scores):
         """
         Selects a single parent from the population using tournament selection.
