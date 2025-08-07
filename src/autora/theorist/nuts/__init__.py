@@ -25,6 +25,7 @@ class NutsTheorists(BaseEstimator):
         self.best_equation = None
         self.best_params = None
         self.best_fitness = -1
+        self.result_list = []
         self.UNARY_OPS = ['np.log', 'np.exp']
         self.BINARY_OPS = ['+', '-', '*', '/', 'np.power']
         self.TERMINALS = ['S1', 'S2', 'c']
@@ -135,7 +136,7 @@ class NutsTheorists(BaseEstimator):
 
         return tree, mse
 
-    def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
+    def generate_next_generation(self, top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
         print("next generation")
         """
         Generate the next generation from top-performing trees.
@@ -151,7 +152,7 @@ class NutsTheorists(BaseEstimator):
             list: New generation of equation trees.
         """
     
-        def crossover(tree1, tree2):
+        def crossover(self, tree1, tree2):
             print("Crossover between trees:")
             print(tree1)
             print(tree2)
@@ -172,7 +173,7 @@ class NutsTheorists(BaseEstimator):
     
             return t1, t2
 
-        def mutate(tree):
+        def mutate(self, tree):
             print("Mutating tree:")
             def recursive_mutate(node, depth=0):
                 if not isinstance(node, list):
@@ -206,12 +207,11 @@ class NutsTheorists(BaseEstimator):
         return new_population
      
         
-    def tree_to_function(tree):
+    def tree_to_function(self, tree):
         """
         Converts a nested list expression like ['+', 'S1', ['*', 'S2', 'c']]
         into a Python function that can be evaluated with input data.
         """
-#hey
 
         def _convert(node):
             if isinstance(node, list):
@@ -239,12 +239,9 @@ class NutsTheorists(BaseEstimator):
         except Exception:
             return -float("inf") 
 
-    def append_tree_score(tree, mse):
-        if not hasattr(append_tree_score, "result_list"):
-            append_tree_score.result_list = []  # initialize list once
-
-        append_tree_score.result_list.append((tree, mse))
-        return append_tree_score.result_list
+    def append_tree_score(self, tree, mse):
+        self.result_list.append((tree, mse))
+        return self.result_list
 
 
     def _tournament(self, population_with_scores):
@@ -253,31 +250,31 @@ class NutsTheorists(BaseEstimator):
 
         Args:
             population_with_scores (list): A list of tuples, where each tuple is
-                                           (tree, mse_score).
+                                        (tree, mse_score).
 
         Returns:
             list: The tree of the winning individual, who will be a parent.
         """
         # 1. Randomly select individuals for the tournament.
         tournament_entrants = random.sample(population_with_scores, self.tournament_size)
-        
+
         # 2. Find the winner of the tournament.
         # The winner is the one with the minimum MSE score.
         # The `key=lambda item: item[1]` tells the `min` function to look at the second element of each tuple (the mse_score) for the comparison.
         winner = min(tournament_entrants, key=lambda item: item[1])
-        
+
         # 3. Return the winner's tree.
         # The `winner` variable is a tuple like (['+', 'S1', 'c'], 0.123), so we return the first element, which is the equation tree itself.
         return winner[0]
-    
+
 
     def fit(self,
-            conditions: Union[pd.DataFrame, np.ndarray],
-            observations: Union[pd.DataFrame, np.ndarray]):
+        conditions: Union[pd.DataFrame, np.ndarray],
+        observations: Union[pd.DataFrame, np.ndarray]):
         pass
 
     def predict(self,
-                conditions: Union[pd.DataFrame, np.ndarray]) -> Union[pd.DataFrame, np.ndarray]:
+        conditions: Union[pd.DataFrame, np.ndarray]) -> Union[pd.DataFrame, np.ndarray]:
         pass
 
 if __name__ == "__main__":
