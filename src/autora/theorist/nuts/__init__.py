@@ -77,6 +77,31 @@ class NutsTheorists(BaseEstimator):
             left_child = self._create_random_tree(max_depth - 1)
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
+        
+    def _selection(self, population_with_scores):
+        """
+        Selects a single parent from the population using tournament selection.
+
+        Args:
+            population_with_scores (list): A list of tuples, where each tuple is
+                                           (tree, mse_score).
+
+        Returns:
+            list: The tree of the winning individual, who will be a parent.
+        """
+        # 1. Randomly select individuals for the tournament.
+        tournament_entrants = random.sample(population_with_scores, self.tournament_size)
+        
+        # 2. Find the winner of the tournament.
+        # The winner is the one with the minimum MSE score.
+        # The `key=lambda item: item[1]` tells the `min` function to look at the second element of each tuple (the mse_score) for the comparison.
+        winner = min(tournament_entrants, key=lambda item: item[1])
+        
+        # 3. Return the winner's tree.
+        # The `winner` variable is a tuple like (['+', 'S1', 'c'], 0.123), so we return the first element, which is the equation tree itself.
+        return winner[0]
+    
+
     def fit(self,
             conditions: Union[pd.DataFrame, np.ndarray],
             observations: Union[pd.DataFrame, np.ndarray]):
