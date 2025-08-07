@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 from sklearn.base import BaseEstimator
+from sklearn.metrics import mean_squared_error
 
 
 class NutsTheorists(BaseEstimator):
@@ -68,7 +69,7 @@ class NutsTheorists(BaseEstimator):
             return [chosen_op, left_child, right_child]
 
 
-    def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
+    def generate_next_generation(self, top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
         print("next generation")
         """
         Generate the next generation from top-performing trees.
@@ -139,11 +140,11 @@ class NutsTheorists(BaseEstimator):
         return new_population
   
         
-    def fitness_function(expression_func, conditions, observations):
+    def fitness_function(self, expression_func, conditions, observations):
     
         try:
             preds = expression_func(conditions)
-            return -mean_squared_error(observations, preds)
+            return mean_squared_error(observations, preds)
         except Exception:
             return -float("inf") 
 
@@ -186,7 +187,7 @@ if __name__ == "__main__":
     random_tree = theorist._create_random_tree(max_depth=3)
     random_tree2 = theorist._create_random_tree(max_depth=3)
 
-    next_gen = generate_next_generation([random_tree, random_tree2], pop_size=4)
+    next_gen = theorist.generate_next_generation([random_tree, random_tree2], pop_size=4)
 
     for i, tree in enumerate(next_gen):
         print(f"Next generation tree {i+1}:         ", tree)
