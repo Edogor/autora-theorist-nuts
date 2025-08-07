@@ -112,7 +112,7 @@ class NutsTheorists(BaseEstimator):
                 if not isinstance(node, list):
                     # Terminal mutation
                     if random.random() < mutation_rate:
-                        return random.choice(['S1', 'S2', 'c'])
+                        return random.choice(self.TERMINALS)
                     return node
 
                 # Subtree mutation
