@@ -35,8 +35,6 @@ class NutsTheorists(BaseEstimator):
         self.result_list = []
         self.UNARY_OPS = ['np.log', 'np.exp']
         self.BINARY_OPS = ['+', '-', '*', '/', 'np.power']
-        self.TERMINALS = ['c']
-
 
     def _create_random_tree(self, max_depth = 3):
         """
@@ -117,8 +115,6 @@ class NutsTheorists(BaseEstimator):
         eq_str = eq_str.replace('^', '**')
         eq_str = eq_str.replace('exp', 'np.exp').replace('log', 'np.log')
 
-        if 'c' in eq_str:
-            eq_str = eq_str.replace('c', str(constant_value))
 
         lambda_str = f"lambda {', '.join(var_names)}: {eq_str}"
         return eval(lambda_str, {"np": np})
@@ -209,7 +205,7 @@ class NutsTheorists(BaseEstimator):
 
                 # Subtree mutation
                 if random.random() < mutation_rate:
-                    return NutsTheorists()._create_random_tree(max_depth)
+                    return self._create_random_tree(max_depth)
 
                 # Recurse through children
                 return [node[0]] + [recursive_mutate(child, depth+1) for child in node[1:]]
@@ -296,14 +292,23 @@ class NutsTheorists(BaseEstimator):
         """
         # 1. INITIALIZATION (Happens once)
         # a. Adapt terminals to the specific problem's data
+
+        # 1. Normalize input
         if isinstance(conditions, pd.DataFrame):
             conditions = conditions.copy()
         elif isinstance(conditions, np.ndarray):
             conditions = pd.DataFrame(conditions, columns=[f'x{i+1}' for i in range(conditions.shape[1])])
-        
+
+        # 2. Set variable names and terminals before using them anywhere
         self.var_names = conditions.columns.tolist()
-        self.TERMINALS += self.var_names
+        self.TERMINALS = [
+            str(round(random.uniform(0.1, 5.0), 3)) for _ in range(5)
+        ] + self.var_names
+
+        # 3. Create initial population (now TERMINALS is available!)
         y_true = observations.values.ravel()
+        population = [self._create_random_tree(5) for _ in range(self.population_size)]
+            
 
         # b. Create the initial random population (Generation 0)
         population = [self._create_random_tree(5) for _ in range(self.population_size)]
@@ -381,8 +386,15 @@ class NutsTheorists(BaseEstimator):
         return eq_str
 
 if __name__ == "__main__":
-    # Example usage of the NutsTheorists class
     theorist = NutsTheorists()
+
+    # Manually set var names and terminals for testing
+    theorist.var_names = ['S1', 'S2']  # or just ['S'] depending on your case
+    theorist.TERMINALS = [
+        str(round(random.uniform(0.1, 5.0), 3)) for _ in range(5)
+    ] + theorist.var_names
+
+    # Generate and test trees
     random_tree = theorist._create_random_tree(max_depth=3)
     random_tree2 = theorist._create_random_tree(max_depth=3)
 
@@ -390,7 +402,6 @@ if __name__ == "__main__":
 
     for i, tree in enumerate(next_gen):
         print(f"Next generation tree {i+1}:         ", tree)
-
 
 
 class SimpleLinearTheorist(BaseEstimator):
