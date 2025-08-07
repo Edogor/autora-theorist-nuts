@@ -68,8 +68,44 @@ class NutsTheorists(BaseEstimator):
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
 
+    def _tree_translate(self, tree):
+        """
+        Recursively converts a nested equation tree into a string.
 
-    def generate_next_generation(self, top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
+        Args:
+            tree (list or str): The equation tree.
+
+        Returns:
+            str: String representation of the equation.
+        """
+        if isinstance(tree, str):  # base case: terminal symbol
+            return tree
+
+        op = tree[0]
+
+        if op in ['+', '-', '*', '/']:
+            left = self._tree_translate(tree[1])
+            right = self._tree_translate(tree[2])
+            return f"({left} {op} {right})"
+
+        elif op == 'np.exp':
+            arg = self._tree_translate(tree[1])
+            return f"exp({arg})"
+
+        elif op == 'np.log':
+            arg = self._tree_translate(tree[1])
+            return f"log({arg})"
+
+        elif op == 'np.power':
+            base = self._tree_translate(tree[1])
+            exponent = self._tree_translate(tree[2])
+            return f"({base} ^ {exponent})"
+
+        else:
+            raise ValueError(f"Unknown operator: {op}")
+        
+
+    def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
         print("next generation")
         """
         Generate the next generation from top-performing trees.
@@ -80,11 +116,11 @@ class NutsTheorists(BaseEstimator):
             mutation_rate (float): Probability of mutating a node.
             max_depth (int): Max depth for new subtrees during mutation.
             elitism (int): Number of best trees to carry over unchanged.
-
+    
         Returns:
             list: New generation of equation trees.
         """
-
+    
         def crossover(tree1, tree2):
             print("Crossover between trees:")
             print(tree1)
@@ -94,16 +130,16 @@ class NutsTheorists(BaseEstimator):
                     return tree, None, None
                 idx = random.randint(1, len(tree)-1)
                 return tree[idx], tree, idx
-
+    
             t1 = copy.deepcopy(tree1)
             t2 = copy.deepcopy(tree2)
-
+    
             node1, parent1, idx1 = get_random_subtree(t1)
             node2, parent2, idx2 = get_random_subtree(t2)
-
+    
             if parent1 is not None and parent2 is not None:
                 parent1[idx1], parent2[idx2] = node2, node1
-
+    
             return t1, t2
 
         def mutate(tree):
@@ -114,21 +150,21 @@ class NutsTheorists(BaseEstimator):
                     if random.random() < mutation_rate:
                         return random.choice(self.TERMINALS)
                     return node
-
+    
                 # Subtree mutation
                 if random.random() < mutation_rate:
                     return NutsTheorists()._create_random_tree(max_depth)
-
+    
                 # Recurse through children
                 return [node[0]] + [recursive_mutate(child, depth+1) for child in node[1:]]
-
+    
             return recursive_mutate(copy.deepcopy(tree))
-
+    
         new_population = []
 
         # Step 1: Elitism — carry over best performers unchanged
         new_population.extend(copy.deepcopy(top_k_trees[:elitism]))
-
+    
         # Step 2: Crossover and mutation
         while len(new_population) < pop_size:
             p1, p2 = random.sample(top_k_trees, 2)
@@ -136,9 +172,9 @@ class NutsTheorists(BaseEstimator):
             new_population.append(mutate(child1))
             if len(new_population) < pop_size:
                 new_population.append(mutate(child2))
-
+    
         return new_population
-  
+     
         
     def fitness_function(self, expression_func, conditions, observations):
     
@@ -148,7 +184,7 @@ class NutsTheorists(BaseEstimator):
         except Exception:
             return -float("inf") 
 
-    def _tournoment(self, population_with_scores):
+    def _tournament(self, population_with_scores):
         """
         Selects a single parent from the population using tournament selection.
 
