@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 from sklearn.base import BaseEstimator
-
+from sklearn.metrics import mean_squared_error
 
 class NutsTheorists(BaseEstimator):
     """
@@ -67,6 +67,42 @@ class NutsTheorists(BaseEstimator):
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
 
+    def _tree_translate(self, tree):
+        """
+        Recursively converts a nested equation tree into a string.
+
+        Args:
+            tree (list or str): The equation tree.
+
+        Returns:
+            str: String representation of the equation.
+        """
+        if isinstance(tree, str):  # base case: terminal symbol
+            return tree
+
+        op = tree[0]
+
+        if op in ['+', '-', '*', '/']:
+            left = self._tree_translate(tree[1])
+            right = self._tree_translate(tree[2])
+            return f"({left} {op} {right})"
+
+        elif op == 'np.exp':
+            arg = self._tree_translate(tree[1])
+            return f"exp({arg})"
+
+        elif op == 'np.log':
+            arg = self._tree_translate(tree[1])
+            return f"log({arg})"
+
+        elif op == 'np.power':
+            base = self._tree_translate(tree[1])
+            exponent = self._tree_translate(tree[2])
+            return f"({base} ^ {exponent})"
+
+        else:
+            raise ValueError(f"Unknown operator: {op}")
+        
 
     def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
         print("next generation")
