@@ -72,6 +72,7 @@ class NutsTheorists(BaseEstimator):
 
 
 def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
+    print("next generation")
     """
     Generate the next generation from top-performing trees.
     
@@ -87,6 +88,9 @@ def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_
     """
 
     def crossover(tree1, tree2):
+        print("Crossover between trees:")
+        print(tree1)
+        print(tree2)
         def get_random_subtree(tree):
             if not isinstance(tree, list):
                 return tree, None, None
@@ -105,6 +109,7 @@ def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_
         return t1, t2
 
     def mutate(tree):
+        print("Mutating tree:")
         def recursive_mutate(node, depth=0):
             if not isinstance(node, list):
                 # Terminal mutation
@@ -151,13 +156,11 @@ if __name__ == "__main__":
     theorist = NutsTheorists()
     random_tree = theorist._create_random_tree(max_depth=3)
     random_tree2 = theorist._create_random_tree(max_depth=3)
-    print("Randomly generated equation tree:", random_tree)
-    print("Randomly generated equation tree 2:", random_tree2)
 
-    next_gen = generate_next_generation([random_tree, random_tree2], pop_size=2)
+    next_gen = generate_next_generation([random_tree, random_tree2], pop_size=4)
 
     for i, tree in enumerate(next_gen):
-        print(f"Next generation tree {i+1}:", tree)
+        print(f"Next generation tree {i+1}:         ", tree)
 
 
 
