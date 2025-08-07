@@ -1,6 +1,3 @@
-"""
-Example Theorist
-"""
 from typing import Union
 import random
 import copy
@@ -10,280 +7,14 @@ from scipy.optimize import curve_fit
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_squared_error
 
-
 class NutsTheorists(BaseEstimator):
     """
+    A Genetic Algorithm-based theorist to discover symbolic equations.
+    This is a corrected and fully integrated version.
     """
 
-    def __init__(self, population_size=100, n_generations=50, mutation_rate=0.1, tournament_size=3):
-        self.population_size = population_size
-        self.n_generation = n_generations
-        self.mutation_rate = mutation_rate
-        self.tournament_size = tournament_size
-
-        #Attributes to store the final result
-        self.best_equation = None
-        self.best_params = None
-        self.best_fitness = -1
-        self.result_list = []
-        self.UNARY_OPS = ['np.log', 'np.exp']
-        self.BINARY_OPS = ['+', '-', '*', '/', 'np.power']
-        self.TERMINALS = ['S1', 'S2', 'c']
-
-    def _create_random_tree(self, max_depth = 3):
-        """
-        Recursively generates a single random equation tree.
-
-        The tree is represented as a nested list.
-        E.g., ['+', 'S1', ['*', 'c', 'S2']] represents S1 + (c * S2)
-
-        Args:
-            max_depth (int): The maximum depth of the tree to generate. This
-                             prevents infinitely long equations.
-
-        Returns:
-            list: A nested list representing the equation tree.
-        """
-        # --- Base Case: Stop growing the tree ---
-        # If we reach max depth, we MUST choose a terminal to end the branch.
-        # We also add a small chance to pick a terminal even if we're not at
-        # max depth, which allows for trees of varying shapes and sizes.
-        if max_depth == 0 or random.random() < 0.2:
-            return random.choice(self.TERMINALS)
-
-        # --- Recursive Step: Grow the tree ---
-        # Choose an operator from all available operators.
-        chosen_op = random.choice(self.UNARY_OPS + self.BINARY_OPS)
-
-        # Build the branch based on the type of operator.
-        if chosen_op in self.UNARY_OPS:
-            # A unary operator has one child.
-            # We call the function again to create that child, reducing the depth.
-            child = self._create_random_tree(max_depth - 1)
-            return [chosen_op, child]
-        
-        elif chosen_op in self.BINARY_OPS:
-            # A binary operator has two children.
-            # We call the function twice to create the left and right children.
-            left_child = self._create_random_tree(max_depth - 1)
-            right_child = self._create_random_tree(max_depth - 1)
-            return [chosen_op, left_child, right_child]
-
-    def _tree_translate(self, tree):
-        """
-        Recursively converts a nested equation tree into a string.
-
-        Args:
-            tree (list or str): The equation tree.
-
-        Returns:
-            str: String representation of the equation.
-        """
-        if isinstance(tree, str):  # base case: terminal symbol
-            return tree
-
-        op = tree[0]
-
-        if op in ['+', '-', '*', '/']:
-            left = self._tree_translate(tree[1])
-            right = self._tree_translate(tree[2])
-            return f"({left} {op} {right})"
-
-        elif op == 'np.exp':
-            arg = self._tree_translate(tree[1])
-            return f"exp({arg})"
-
-        elif op == 'np.log':
-            arg = self._tree_translate(tree[1])
-            return f"log({arg})"
-
-        elif op == 'np.power':
-            base = self._tree_translate(tree[1])
-            exponent = self._tree_translate(tree[2])
-            return f"({base} ^ {exponent})"
-
-        else:
-            raise ValueError(f"Unknown operator: {op}")
-        
-    def _translate_tree_to_callable(self, eq_str, var_names, constant_value=1.0):
-        eq_str = eq_str.replace('^', '**')
-        eq_str = eq_str.replace('exp', 'np.exp').replace('log', 'np.log')
-
-        if 'c' in eq_str:
-            eq_str = eq_str.replace('c', str(constant_value))
-
-        lambda_str = f"lambda {', '.join(var_names)}: {eq_str}"
-        return eval(lambda_str, {"np": np})
-
-    def _evaluate_tree_mse(self, tree, conditions, observations, constant_value=1.0):
-        """
-        Translates a tree into a function, evaluates it on the conditions,
-        and computes the MSE against observations.
-
-        Returns:
-            tuple: (tree, mse)
-        """
-        try:
-            eq_str = self._tree_translate(tree)
-            func = self._translate_tree_to_callable(eq_str, conditions.columns.tolist(), constant_value)
-
-            preds = np.array([func(*row) for row in conditions.values]).reshape(-1, 1)
-            targets = np.array(observations).reshape(-1, 1)
-            mse = mean_squared_error(targets, preds)
-
-        except Exception:
-            mse = float("inf")  # Penalize invalid equations
-
-        return tree, mse
-
-
-    def generate_next_generation(self, top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
-        print("next generation")
-        """
-        Generate the next generation from top-performing trees.
-        
-        Args:
-            top_k_trees (list): Top-performing trees (equation trees).
-            pop_size (int): Total population size to generate.
-            mutation_rate (float): Probability of mutating a node.
-            max_depth (int): Max depth for new subtrees during mutation.
-            elitism (int): Number of best trees to carry over unchanged.
-
-        Returns:
-            list: New generation of equation trees.
-        """
-
-        def crossover(self, tree1, tree2):
-            print("Crossover between trees:")
-            print(tree1)
-            print(tree2)
-            def get_random_subtree(tree):
-                if not isinstance(tree, list):
-                    return tree, None, None
-                idx = random.randint(1, len(tree)-1)
-                return tree[idx], tree, idx
-
-            t1 = copy.deepcopy(tree1)
-            t2 = copy.deepcopy(tree2)
-
-            node1, parent1, idx1 = get_random_subtree(t1)
-            node2, parent2, idx2 = get_random_subtree(t2)
-
-            if parent1 is not None and parent2 is not None:
-                parent1[idx1], parent2[idx2] = node2, node1
-
-            return t1, t2
-
-        def mutate(self, tree):
-            print("Mutating tree:")
-            def recursive_mutate(node, depth=0):
-                if not isinstance(node, list):
-                    # Terminal mutation
-                    if random.random() < mutation_rate:
-                        return random.choice(self.TERMINALS)
-                    return node
-
-                # Subtree mutation
-                if random.random() < mutation_rate:
-                    return NutsTheorists()._create_random_tree(max_depth)
-
-                # Recurse through children
-                return [node[0]] + [recursive_mutate(child, depth+1) for child in node[1:]]
-
-            return recursive_mutate(copy.deepcopy(tree))
-
-        new_population = []
-
-        # Step 1: Elitism — carry over best performers unchanged
-        new_population.extend(copy.deepcopy(top_k_trees[:elitism]))
-
-        # Step 2: Crossover and mutation
-        while len(new_population) < pop_size:
-            p1, p2 = random.sample(top_k_trees, 2)
-            child1, child2 = crossover(p1, p2)
-            new_population.append(mutate(child1))
-            if len(new_population) < pop_size:
-                new_population.append(mutate(child2))
-
-        return new_population
-     
-        
-    def tree_to_function(self, tree):
-        """
-        Converts a nested list expression like ['+', 'S1', ['*', 'S2', 'c']]
-        into a Python function that can be evaluated with input data.
-        """
-
-        def _convert(node):
-            if isinstance(node, list):
-                if len(node) == 2:  # Unary op
-                    return f"{node[0]}({_convert(node[1])})"
-                elif len(node) == 3:  # Binary op
-                    return f"({_convert(node[1])} {node[0]} {_convert(node[2])})"
-            else:
-                return str(node)
-
-        expr = _convert(tree)
-
-        return lambda cond: eval(expr, {
-            "np": np,
-            "S1": cond[:, 0],
-            "S2": cond[:, 1],
-            "c": 1.0
-        })
-
-    
-    def fitness_function(self, expression_func, conditions, observations):
-        try:
-            preds = expression_func(conditions)
-            return mean_squared_error(observations, preds)
-        except Exception:
-            return -float("inf") 
-
-    def append_tree_score(self, tree, mse):
-        self.result_list.append((tree, mse))
-        return self.result_list
-
-
-    def _tournament(self, population_with_scores):
-        """
-        Selects a single parent from the population using tournament selection.
-
-        Args:
-            population_with_scores (list): A list of tuples, where each tuple is
-                                        (tree, mse_score).
-
-        Returns:
-            list: The tree of the winning individual, who will be a parent.
-        """
-        # 1. Randomly select individuals for the tournament.
-        tournament_entrants = random.sample(population_with_scores, self.tournament_size)
-
-        # 2. Find the winner of the tournament.
-        # The winner is the one with the minimum MSE score.
-        # The `key=lambda item: item[1]` tells the `min` function to look at the second element of each tuple (the mse_score) for the comparison.
-        winner = min(tournament_entrants, key=lambda item: item[1])
-
-        # 3. Return the winner's tree.
-        # The `winner` variable is a tuple like (['+', 'S1', 'c'], 0.123), so we return the first element, which is the equation tree itself.
-        return winner[0]
-
-
-    def fit(self,
-        conditions: Union[pd.DataFrame, np.ndarray],
-        observations: Union[pd.DataFrame, np.ndarray]):
-        import random
-import copy
-import numpy as np
-import pandas as pd
-from sklearn.base import BaseEstimator
-from sklearn.metrics import mean_squared_error
-
-class GeneticTheorist(BaseEstimator):
-    """
-    A theorist that uses a Genetic Algorithm to discover symbolic equations.
-    """
-    def __init__(self, population_size=100, n_generations=50, mutation_rate=0.1, tournament_size=3, elitism=2, max_depth=4):
+    def __init__(self, population_size=50, n_generations=30, mutation_rate=0.15, tournament_size=3, elitism=2, max_depth=4):
+        # --- GA Hyperparameters ---
         self.population_size = population_size
         self.n_generations = n_generations
         self.mutation_rate = mutation_rate
@@ -291,230 +22,180 @@ class GeneticTheorist(BaseEstimator):
         self.elitism = elitism
         self.max_depth = max_depth
 
+        # --- Internal Attributes (will be set during .fit()) ---
         self.best_equation_ = None
+        self.best_params_ = None
         self.best_fitness_ = -float('inf')
+        
         self.UNARY_OPS = ['np.log', 'np.exp']
-        self.BINARY_OPS = ['+', '-', '*', '/']
-        self.TERMINALS = []
+        self.BINARY_OPS = ['+', '-', '*', '/', 'np.power']
+        self.TERMINALS = [] # Will be set dynamically in .fit()
+        self.variable_names_ = []
 
-    # --- HELPER METHODS (Place your actual implementations here) ---
+    # --- 1. HELPER METHODS FOR TREE MANIPULATION ---
 
     def _create_random_tree(self, max_depth):
-        # Your implementation from before
-        if max_depth == 0 or random.random() < 0.2:
+        """Recursively generates a single random equation tree."""
+        if max_depth == 0 or random.random() < 0.3:
             return random.choice(self.TERMINALS)
-        op = random.choice(self.UNARY_OPS + self.BINARY_OPS)
-        if op in self.UNARY_OPS:
-            return [op, self._create_random_tree(max_depth - 1)]
-        else:
-            return [op, self._create_random_tree(max_depth - 1), self._create_random_tree(max_depth - 1)]
 
-    def _get_fitness(self, tree, X, y):
-        # This is a placeholder for your teammate's function.
-        # It should convert the tree to a callable function, use curve_fit,
-        # and return the negative MSE.
+        chosen_op = random.choice(self.UNARY_OPS + self.BINARY_OPS)
+
+        if chosen_op in self.UNARY_OPS:
+            child = self._create_random_tree(max_depth - 1)
+            return [chosen_op, child]
+        else: # Binary op
+            left = self._create_random_tree(max_depth - 1)
+            right = self._create_random_tree(max_depth - 1)
+            return [chosen_op, left, right]
+
+    def _tree_to_lambda_string(self, tree):
+        """Recursively converts a tree to an evaluatable string."""
+        if not isinstance(tree, list):
+            return str(tree)
+        
+        op = tree[0]
+        if op == 'np.power':
+            base = self._tree_to_lambda_string(tree[1])
+            exponent = self._tree_to_lambda_string(tree[2])
+            return f"np.power({base}, {exponent})"
+
+        elif op in self.UNARY_OPS:
+            child_str = self._tree_to_lambda_string(tree[1])
+            return f"{op}({child_str})"
+            
+        elif op in self.BINARY_OPS: # Handles '+', '-', '*', '/'
+            left_str = self._tree_to_lambda_string(tree[1])
+            right_str = self._tree_to_lambda_string(tree[2])
+            return f"({left_str} {op} {right_str})"
+
+    # --- 2. FITNESS EVALUATION (CRITICAL FIX) ---
+
+    def _get_fitness(self, tree, X_df, y_series):
+        """
+        Calculates fitness by using curve_fit to find the best constant 'c'
+        and then computing the negative MSE.
+        """
         try:
-            # A dummy calculation for demonstration
-            if 'S1' in X.columns:
-                pred = X['S1'] * 2 + (X['S2'] if 'S2' in X.columns else 0)
-                mse = mean_squared_error(y, pred)
-                return -mse
-            return -1e9
-        except:
-            return -float('inf')
+            # a. Convert the tree into a callable function string
+            func_str = self._tree_to_lambda_string(tree)
+            
+            # b. Create the target function for curve_fit. 
+            # It must take X data and the parameters to be fitted (just 'c').
+            # The lambda function will unpack the dataframe columns.
+            var_map = {name: f"X['{name}']" for name in self.variable_names_}
+            lambda_body = func_str
+            for var, access_str in var_map.items():
+                lambda_body = lambda_body.replace(var, access_str)
+
+            target_func = eval(f"lambda X, c: {lambda_body}", {"np": np})
+
+            # c. Use curve_fit to find the optimal value for the constant 'c'.
+            # This is the most important step for accurate evaluation.
+            params, _ = curve_fit(target_func, X_df, y_series, p0=[1.0], maxfev=5000)
+            best_c = params[0]
+
+            # d. Make predictions with the best-fit constant and calculate MSE.
+            predictions = target_func(X_df, best_c)
+            mse = mean_squared_error(y_series, predictions)
+
+            # e. Return negative MSE as fitness (higher is better).
+            return -mse, params
+
+        except (RuntimeError, TypeError, ValueError, ZeroDivisionError):
+            # If curve_fit fails or the equation is invalid, assign worst fitness.
+            return -float('inf'), None
+
+    # --- 3. GENETIC OPERATORS ---
 
     def _tournament_selection(self, population_with_scores):
+        """Selects one parent using a tournament."""
         tournament = random.sample(population_with_scores, self.tournament_size)
         winner = max(tournament, key=lambda item: item[1])
-        return winner[0]
+        return winner[0] # Return the tree
 
     def _crossover(self, parent1, parent2):
-        # Using a simplified crossover for demonstration.
-        # A real implementation would swap random nodes.
-        return copy.deepcopy(random.choice([parent1, parent2]))
+        """Performs crossover by swapping random sub-trees."""
+        child = copy.deepcopy(parent1)
+        # Simplified crossover: replace a random part of parent1 with a random part of parent2
+        if isinstance(child, list) and len(child) > 1:
+            idx_to_replace = random.randint(1, len(child) - 1)
+            if isinstance(parent2, list) and len(parent2) > 1:
+                replacement_node = copy.deepcopy(random.choice(parent2[1:]))
+                child[idx_to_replace] = replacement_node
+        return child
 
     def _mutate(self, tree):
+        """Applies mutation by replacing a random node with a new random sub-tree."""
         if random.random() < self.mutation_rate:
-            return self._create_random_tree(max_depth=2)
+            if isinstance(tree, list) and len(tree) > 1:
+                idx_to_mutate = random.randint(1, len(tree) - 1)
+                tree[idx_to_mutate] = self._create_random_tree(max_depth=1)
         return tree
 
-    # --- THE MAIN FIT FUNCTION ---
+    # --- 4. MAIN FIT AND PREDICT METHODS ---
 
     def fit(self, conditions: pd.DataFrame, observations: pd.DataFrame):
-        """
-        Runs the genetic algorithm to find the best equation.
-        """
-        # 1. INITIALIZATION (Happens once)
-        # a. Adapt terminals to the specific problem's data
-        self.TERMINALS = list(conditions.columns) + ['c']
+        """Runs the genetic algorithm to find the best equation."""
+        # --- Initialization ---
+        self.variable_names_ = list(conditions.columns)
+        self.TERMINALS = self.variable_names_ + ['c']
         y_true = observations.values.ravel()
-
-        # b. Create the initial random population (Generation 0)
         population = [self._create_random_tree(self.max_depth) for _ in range(self.population_size)]
 
-        # --- 2. THE MAIN EVOLUTION LOOP ---
+        # --- Main Evolution Loop ---
         for generation in range(self.n_generations):
-            # a. EVALUATION: Score every individual in the current population.
+            # a. Evaluate population
             pop_with_scores = []
             for tree in population:
-                fitness = self._get_fitness(tree, conditions, y_true)
-                pop_with_scores.append((tree, fitness))
+                fitness, params = self._get_fitness(tree, conditions, y_true)
+                pop_with_scores.append((tree, fitness, params))
 
-            # b. TRACK THE BEST: Sort by fitness and check for a new best-ever solution.
+            # b. Sort and track the best individual
             pop_with_scores.sort(key=lambda item: item[1], reverse=True)
-            
             if pop_with_scores[0][1] > self.best_fitness_:
-                self.best_fitness_ = pop_with_scores[0][1]
-                self.best_equation_ = pop_with_scores[0][0]
+                self.best_equation_, self.best_fitness_, self.best_params_ = pop_with_scores[0]
                 print(f"Gen {generation+1}: New best fitness = {self.best_fitness_:.4f}")
 
-            # c. REPRODUCTION: Create the next generation's population.
+            # c. Create the next generation
             new_population = []
-
-            # Elitism: The top individuals pass directly to the next generation.
-            elites = [tree for tree, score in pop_with_scores[:self.elitism]]
+            elites = [tree for tree, _, _ in pop_with_scores[:self.elitism]]
             new_population.extend(elites)
-
-            # Crossover & Mutation: Fill the rest of the population.
+            
             while len(new_population) < self.population_size:
                 parent1 = self._tournament_selection(pop_with_scores)
                 parent2 = self._tournament_selection(pop_with_scores)
-                
                 child = self._crossover(parent1, parent2)
                 child = self._mutate(child)
-                
                 new_population.append(child)
-
-            # d. REPLACEMENT: The new generation becomes the current population.
+            
             population = new_population
 
         print("\nEvolution finished.")
-        print(f"Best equation found: {self.best_equation_}")
-        print(f"Best fitness (-MSE): {self.best_fitness_}")
-        
         return self
 
+    def predict(self, conditions: pd.DataFrame):
+        """Makes predictions using the best-found equation."""
+        if self.best_equation_ is None:
+            raise RuntimeError("You must call .fit() before .predict()")
 
-    def predict(self,
-        conditions: Union[pd.DataFrame, np.ndarray]) -> Union[pd.DataFrame, np.ndarray]:
-        pass
-
-if __name__ == "__main__":
-    # Example usage of the NutsTheorists class
-    theorist = NutsTheorists()
-    random_tree = theorist._create_random_tree(max_depth=3)
-    random_tree2 = theorist._create_random_tree(max_depth=3)
-
-    next_gen = theorist.generate_next_generation([random_tree, random_tree2], pop_size=4)
-
-    for i, tree in enumerate(next_gen):
-        print(f"Next generation tree {i+1}:         ", tree)
-
-
-
-class SimpleLinearTheorist(BaseEstimator):
-    """
-    A simple theorist that fits a linear equation: y = a*x + b
-    """
-
-    def __init__(self):
-        self.model = LinearRegression()
-        self.coef_ = None
-        self.intercept_ = None
-
-    def fit(self, conditions, observations):
-        self.model.fit(conditions, observations)
-        self.coef_ = self.model.coef_
-        self.intercept_ = self.model.intercept_
-
-    def predict(self, conditions):
-        return self.model.predict(conditions)
+        func_str = self._tree_to_lambda_string(self.best_equation_)
+        var_map = {name: f"X['{name}']" for name in self.variable_names_}
+        lambda_body = func_str
+        for var, access_str in var_map.items():
+            lambda_body = lambda_body.replace(var, access_str)
+        
+        best_c = self.best_params_[0] if self.best_params_ is not None else 1.0
+        
+        final_func = eval(f"lambda X, c: {lambda_body}", {"np": np})
+        predictions = final_func(conditions, best_c)
+        return predictions.values.reshape(-1, 1)
 
     def print_eqn(self):
-        # Handles single or multi-output
-        if hasattr(self.coef_, "shape") and len(self.coef_.shape) > 1:
-            eqns = []
-            for i, (coef, intercept) in enumerate(zip(self.coef_, self.intercept_)):
-                terms = " + ".join([f"{c:.3f}*x{j+1}" for j, c in enumerate(coef)])
-                eqns.append(f"y{i+1} = {terms} + {intercept:.3f}")
-            return "\n".join(eqns)
-        else:
-            terms = " + ".join([f"{c:.3f}*x{j+1}" for j, c in enumerate(self.coef_)])
-            return f"y = {terms} + {self.intercept_:.3f}"
-
-class UniversalTheorist(BaseEstimator):
-    """
-    Automatically fits a power law for single feature,
-    or a log-ratio law for two features.
-    """
-
-    def __init__(self):
-        self.model_type = None
-        self.params_ = None
-
-    def _power_law(self, x, a, b, c):
-        return a * np.power(x, b) + c
-
-    def _log_ratio(self, X, a, b):
-        S1 = X[:, 0]
-        S2 = X[:, 1]
-        return a * np.log(S1 / S2) + b
-
-    def fit(self, conditions, observations):
-        if isinstance(conditions, pd.DataFrame):
-            X = conditions.values
-        else:
-            X = np.array(conditions)
-        y = np.array(observations).flatten()
-        n_features = X.shape[1] if X.ndim > 1 else 1
-
-        if n_features == 1:
-            self.model_type = "power"
-            x = X.flatten()
-            popt, _ = curve_fit(self._power_law, x, y, p0=[1, 1, 0], maxfev=10000)
-            self.params_ = popt
-        elif n_features == 2:
-            self.model_type = "logratio"
-            popt, _ = curve_fit(self._log_ratio, X, y, p0=[1, 0], maxfev=10000)
-            self.params_ = popt
-        else:
-            raise ValueError("UniversalTheorist only supports 1 or 2 input features.")
-
-    def predict(self, conditions):
-        if isinstance(conditions, pd.DataFrame):
-            X = conditions.values
-            index = conditions.index
-        else:
-            X = np.array(conditions)
-            index = None
-        n_features = X.shape[1] if X.ndim > 1 else 1
-
-        if self.model_type == "power":
-            x = X.flatten()
-            a, b, c = self.params_
-            y_pred = self._power_law(x, a, b, c)
-        elif self.model_type == "logratio":
-            a, b = self.params_
-            y_pred = self._log_ratio(X, a, b)
-        else:
-            raise ValueError("Model not fitted or unsupported feature count.")
-
-        if index is not None:
-            return pd.Series(y_pred, index=index)
-        else:
-            return pd.Series(y_pred)
-
-    def print_eqn(self):
-        if self.model_type == "power":
-            a, b, c = self.params_
-            eqn = f"y = {a:.3f} * x^{b:.3f} + {c:.3f}"
-            print(f"Equation: {eqn}")
-            return eqn
-        elif self.model_type == "logratio":
-            a, b = self.params_
-            eqn = f"y = {a:.3f} * ln(x1/x2) + {b:.3f}"
-            print(f"Equation: {eqn}")
-            return eqn
-        else:
-            return "No model fitted."
+        """Returns the best-found equation as a string."""
+        if self.best_equation_ is None:
+            return "Model has not been fitted yet."
+        
+        # This is a simplified string translation. You can make it prettier.
+        return self._tree_to_lambda_string(self.best_equation_)
 
