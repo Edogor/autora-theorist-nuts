@@ -78,7 +78,7 @@ class NutsTheorists(BaseEstimator):
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
         
-    def _selection(self, population_with_scores):
+    def _tournoment(self, population_with_scores):
         """
         Selects a single parent from the population using tournament selection.
 
