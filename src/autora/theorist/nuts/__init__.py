@@ -104,6 +104,36 @@ class NutsTheorists(BaseEstimator):
         else:
             raise ValueError(f"Unknown operator: {op}")
         
+    def _translate_tree_to_callable(self, eq_str, var_names, constant_value=1.0):
+        eq_str = eq_str.replace('^', '**')
+        eq_str = eq_str.replace('exp', 'np.exp').replace('log', 'np.log')
+
+        if 'c' in eq_str:
+            eq_str = eq_str.replace('c', str(constant_value))
+
+        lambda_str = f"lambda {', '.join(var_names)}: {eq_str}"
+        return eval(lambda_str, {"np": np})
+
+    def _evaluate_tree_mse(self, tree, conditions, observations, constant_value=1.0):
+        """
+        Translates a tree into a function, evaluates it on the conditions,
+        and computes the MSE against observations.
+
+        Returns:
+            tuple: (tree, mse)
+        """
+        try:
+            eq_str = self._tree_translate(tree)
+            func = self._translate_tree_to_callable(eq_str, conditions.columns.tolist(), constant_value)
+
+            preds = np.array([func(*row) for row in conditions.values]).reshape(-1, 1)
+            targets = np.array(observations).reshape(-1, 1)
+            mse = mean_squared_error(targets, preds)
+
+        except Exception:
+            mse = float("inf")  # Penalize invalid equations
+
+        return tree, mse
 
     def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
         print("next generation")
@@ -209,7 +239,7 @@ class NutsTheorists(BaseEstimator):
         except Exception:
             return -float("inf") 
 
-   def append_tree_score(tree, mse):
+    def append_tree_score(tree, mse):
         if not hasattr(append_tree_score, "result_list"):
             append_tree_score.result_list = []  # initialize list once
 

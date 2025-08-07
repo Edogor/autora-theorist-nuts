@@ -1,0 +1,51 @@
+import unittest
+import pandas as pd
+import numpy as np
+from autora.theorist.nuts import NutsTheorists  # adjust import as needed
+
+class TestTreeMSE(unittest.TestCase):
+    def setUp(self):
+        self.model = NutsTheorists()
+
+    def test_mse_linear_add(self):
+        # y = S1 + S2
+        tree = ['+', 'S1', 'S2']
+        conditions = pd.DataFrame({
+            'S1': [1, 2, 3],
+            'S2': [4, 5, 6]
+        })
+        observations = pd.DataFrame({
+            'y': [5, 7, 9]  # perfect match
+        })
+
+        tree_out, mse = self.model._evaluate_tree_mse(tree, conditions, observations)
+        self.assertEqual(tree, tree_out)
+        self.assertAlmostEqual(mse, 0.0)
+
+    def test_mse_with_constant_c(self):
+        # y = S1 + c*S2, c = 2
+        tree = ['+', 'S1', ['*', 'c', 'S2']]
+        conditions = pd.DataFrame({
+            'S1': [1, 2],
+            'S2': [2, 3]
+        })
+        observations = pd.DataFrame({
+            'y': [1 + 2*2, 2 + 2*3]  # [5, 8]
+        })
+
+        tree_out, mse = self.model._evaluate_tree_mse(tree, conditions, observations, constant_value=2)
+        self.assertEqual(tree, tree_out)
+        self.assertAlmostEqual(mse, 0.0)
+
+    def test_invalid_equation(self):
+        # Invalid op
+        tree = ['invalid', 'S1', 'S2']
+        conditions = pd.DataFrame({'S1': [1], 'S2': [2]})
+        observations = pd.DataFrame({'y': [3]})
+
+        tree_out, mse = self.model._evaluate_tree_mse(tree, conditions, observations)
+        self.assertEqual(tree, tree_out)
+        self.assertEqual(mse, float('inf'))
+
+if __name__ == '__main__':
+    unittest.main()
