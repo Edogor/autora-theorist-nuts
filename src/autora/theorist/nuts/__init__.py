@@ -180,7 +180,6 @@ class NutsTheorists(BaseEstimator):
         for gen in range(self.n_generation):
             print(f"-> Starting Generation {generation_0 + 1}/{self.n_generations}")
             pop_with_scores = []
-            for tree in generation_0:
                 
 
 
