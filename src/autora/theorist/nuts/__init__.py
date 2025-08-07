@@ -3,26 +3,15 @@ Example Theorist
 """
 from typing import Union
 import random
+import copy
 import numpy as np
 import pandas as pd
+from scipy.optimize import curve_fit
 from sklearn.base import BaseEstimator
-from sklearn.metrics import mean_squared_error
 
 
 class NutsTheorists(BaseEstimator):
     """
-    Include inline mathematics in docstring \\(x < 1\\) or $c = 3$
-    or block mathematics:
-
-    \\[
-        x + 1 = 3
-    \\]
-
-
-    $$
-    y + 1 = 4
-    $$
-
     """
 
     def __init__(self, population_size=100, n_generations=50, mutation_rate=0.1, tournament_size=3):
@@ -77,6 +66,78 @@ class NutsTheorists(BaseEstimator):
             left_child = self._create_random_tree(max_depth - 1)
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
+
+
+def generate_next_generation(top_k_trees, pop_size=1000, mutation_rate=0.2, max_depth=3, elitism=2):
+    print("next generation")
+    """
+    Generate the next generation from top-performing trees.
+    
+    Args:
+        top_k_trees (list): Top-performing trees (equation trees).
+        pop_size (int): Total population size to generate.
+        mutation_rate (float): Probability of mutating a node.
+        max_depth (int): Max depth for new subtrees during mutation.
+        elitism (int): Number of best trees to carry over unchanged.
+
+    Returns:
+        list: New generation of equation trees.
+    """
+
+    def crossover(tree1, tree2):
+        print("Crossover between trees:")
+        print(tree1)
+        print(tree2)
+        def get_random_subtree(tree):
+            if not isinstance(tree, list):
+                return tree, None, None
+            idx = random.randint(1, len(tree)-1)
+            return tree[idx], tree, idx
+
+        t1 = copy.deepcopy(tree1)
+        t2 = copy.deepcopy(tree2)
+
+        node1, parent1, idx1 = get_random_subtree(t1)
+        node2, parent2, idx2 = get_random_subtree(t2)
+
+        if parent1 is not None and parent2 is not None:
+            parent1[idx1], parent2[idx2] = node2, node1
+
+        return t1, t2
+
+    def mutate(tree):
+        print("Mutating tree:")
+        def recursive_mutate(node, depth=0):
+            if not isinstance(node, list):
+                # Terminal mutation
+                if random.random() < mutation_rate:
+                    return random.choice(['S1', 'S2', 'c'])
+                return node
+
+            # Subtree mutation
+            if random.random() < mutation_rate:
+                return NutsTheorists()._create_random_tree(max_depth)
+
+            # Recurse through children
+            return [node[0]] + [recursive_mutate(child, depth+1) for child in node[1:]]
+
+        return recursive_mutate(copy.deepcopy(tree))
+
+    new_population = []
+
+    # Step 1: Elitism — carry over best performers unchanged
+    new_population.extend(copy.deepcopy(top_k_trees[:elitism]))
+
+    # Step 2: Crossover and mutation
+    while len(new_population) < pop_size:
+        p1, p2 = random.sample(top_k_trees, 2)
+        child1, child2 = crossover(p1, p2)
+        new_population.append(mutate(child1))
+        if len(new_population) < pop_size:
+            new_population.append(mutate(child2))
+
+    return new_population
+  
         
     def fitness_function(expression_func, conditions, observations):
     
@@ -118,3 +179,123 @@ class NutsTheorists(BaseEstimator):
     def predict(self,
                 conditions: Union[pd.DataFrame, np.ndarray]) -> Union[pd.DataFrame, np.ndarray]:
         pass
+
+if __name__ == "__main__":
+    # Example usage of the NutsTheorists class
+    theorist = NutsTheorists()
+    random_tree = theorist._create_random_tree(max_depth=3)
+    random_tree2 = theorist._create_random_tree(max_depth=3)
+
+    next_gen = generate_next_generation([random_tree, random_tree2], pop_size=4)
+
+    for i, tree in enumerate(next_gen):
+        print(f"Next generation tree {i+1}:         ", tree)
+
+
+
+class SimpleLinearTheorist(BaseEstimator):
+    """
+    A simple theorist that fits a linear equation: y = a*x + b
+    """
+
+    def __init__(self):
+        self.model = LinearRegression()
+        self.coef_ = None
+        self.intercept_ = None
+
+    def fit(self, conditions, observations):
+        self.model.fit(conditions, observations)
+        self.coef_ = self.model.coef_
+        self.intercept_ = self.model.intercept_
+
+    def predict(self, conditions):
+        return self.model.predict(conditions)
+
+    def print_eqn(self):
+        # Handles single or multi-output
+        if hasattr(self.coef_, "shape") and len(self.coef_.shape) > 1:
+            eqns = []
+            for i, (coef, intercept) in enumerate(zip(self.coef_, self.intercept_)):
+                terms = " + ".join([f"{c:.3f}*x{j+1}" for j, c in enumerate(coef)])
+                eqns.append(f"y{i+1} = {terms} + {intercept:.3f}")
+            return "\n".join(eqns)
+        else:
+            terms = " + ".join([f"{c:.3f}*x{j+1}" for j, c in enumerate(self.coef_)])
+            return f"y = {terms} + {self.intercept_:.3f}"
+
+class UniversalTheorist(BaseEstimator):
+    """
+    Automatically fits a power law for single feature,
+    or a log-ratio law for two features.
+    """
+
+    def __init__(self):
+        self.model_type = None
+        self.params_ = None
+
+    def _power_law(self, x, a, b, c):
+        return a * np.power(x, b) + c
+
+    def _log_ratio(self, X, a, b):
+        S1 = X[:, 0]
+        S2 = X[:, 1]
+        return a * np.log(S1 / S2) + b
+
+    def fit(self, conditions, observations):
+        if isinstance(conditions, pd.DataFrame):
+            X = conditions.values
+        else:
+            X = np.array(conditions)
+        y = np.array(observations).flatten()
+        n_features = X.shape[1] if X.ndim > 1 else 1
+
+        if n_features == 1:
+            self.model_type = "power"
+            x = X.flatten()
+            popt, _ = curve_fit(self._power_law, x, y, p0=[1, 1, 0], maxfev=10000)
+            self.params_ = popt
+        elif n_features == 2:
+            self.model_type = "logratio"
+            popt, _ = curve_fit(self._log_ratio, X, y, p0=[1, 0], maxfev=10000)
+            self.params_ = popt
+        else:
+            raise ValueError("UniversalTheorist only supports 1 or 2 input features.")
+
+    def predict(self, conditions):
+        if isinstance(conditions, pd.DataFrame):
+            X = conditions.values
+            index = conditions.index
+        else:
+            X = np.array(conditions)
+            index = None
+        n_features = X.shape[1] if X.ndim > 1 else 1
+
+        if self.model_type == "power":
+            x = X.flatten()
+            a, b, c = self.params_
+            y_pred = self._power_law(x, a, b, c)
+        elif self.model_type == "logratio":
+            a, b = self.params_
+            y_pred = self._log_ratio(X, a, b)
+        else:
+            raise ValueError("Model not fitted or unsupported feature count.")
+
+        if index is not None:
+            return pd.Series(y_pred, index=index)
+        else:
+            return pd.Series(y_pred)
+
+    def print_eqn(self):
+        if self.model_type == "power":
+            a, b, c = self.params_
+            eqn = f"y = {a:.3f} * x^{b:.3f} + {c:.3f}"
+            print(f"Equation: {eqn}")
+            return eqn
+        elif self.model_type == "logratio":
+            a, b = self.params_
+            eqn = f"y = {a:.3f} * ln(x1/x2) + {b:.3f}"
+            print(f"Equation: {eqn}")
+            return eqn
+        else:
+            return "No model fitted."
+
