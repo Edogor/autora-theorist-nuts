@@ -83,6 +83,7 @@ class NutsTheorists(BaseEstimator):
         Converts a nested list expression like ['+', 'S1', ['*', 'S2', 'c']]
         into a Python function that can be evaluated with input data.
         """
+#hey
 
         def _convert(node):
             if isinstance(node, list):
