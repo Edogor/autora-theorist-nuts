@@ -78,8 +78,6 @@ class NutsTheorists(BaseEstimator):
             right_child = self._create_random_tree(max_depth - 1)
             return [chosen_op, left_child, right_child]
         
-        import numpy as np
-
     def tree_to_function(tree):
         """
         Converts a nested list expression like ['+', 'S1', ['*', 'S2', 'c']]
