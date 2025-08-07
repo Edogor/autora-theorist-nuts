@@ -2,10 +2,10 @@ import unittest
 import pandas as pd
 import numpy as np
 from autora.theorist.nuts import NutsTheorists  # adjust import as needed
-
+#Unit test of fitness function computing mean squared error of generated equation tree over conditions and observations
 class TestTreeMSE(unittest.TestCase):
     def setUp(self):
-        self.model = NutsTheorists()
+        self.model = NutsTheorists() 
 
     def test_mse_linear_add(self):
         # y = S1 + S2
@@ -46,6 +46,67 @@ class TestTreeMSE(unittest.TestCase):
         tree_out, mse = self.model._evaluate_tree_mse(tree, conditions, observations)
         self.assertEqual(tree, tree_out)
         self.assertEqual(mse, float('inf'))
+        
+    def test_mse_complex_expression(self):
+        # y = exp(S1 + S2) + log(S1 * S2) + S1^2
+        tree = ['+', 
+                    ['+', 
+                        ['np.exp', ['+', 'S1', 'S2']], 
+                        ['np.log', ['*', 'S1', 'S2']]
+                    ],
+                    ['np.power', 'S1', 'c']
+               ]
+
+        # Use c = 2
+        conditions = pd.DataFrame({
+            'S1': [1, 2],
+            'S2': [2, 3]
+        })
+
+        # y = exp(S1 + S2) + log(S1 * S2) + S1**2
+        expected = [
+            np.exp(1 + 2) + np.log(1 * 2) + 1**2,  # ≈ 20.085 + 0.693 + 1
+            np.exp(2 + 3) + np.log(2 * 3) + 2**2   # ≈ 148.413 + 1.791 + 4
+        ]
+        observations = pd.DataFrame({'y': expected})
+
+        tree_out, mse = self.model._evaluate_tree_mse(tree, conditions, observations, constant_value=2)
+        self.assertEqual(tree, tree_out)
+        self.assertAlmostEqual(mse, 0.0, places=5)
+
+    def test_mse_multi_input_complex_expression(self):
+        # Equation: y = exp(S1 + S2) + log(S3 * S4) + S1^2 + S4
+        tree = ['+', 
+                    ['+', 
+                        ['+', 
+                            ['np.exp', ['+', 'S1', 'S2']],
+                            ['np.log', ['*', 'S3', 'S4']]
+                        ],
+                        ['np.power', 'S1', 'c']
+                    ],
+                    'S4'
+               ]
+
+        # Use c = 2
+        conditions = pd.DataFrame({
+            'S1': [1, 2],
+            'S2': [2, 3],
+            'S3': [1, 2],
+            'S4': [2, 3]
+        })
+
+        # Expected values:
+        # y = exp(S1 + S2) + log(S3 * S4) + S1**2 + S4
+        expected = [
+            np.exp(1 + 2) + np.log(1 * 2) + 1**2 + 2,  # ≈ 20.085 + 0.693 + 1 + 2
+            np.exp(2 + 3) + np.log(2 * 3) + 2**2 + 3   # ≈ 148.413 + 1.792 + 4 + 3
+        ]
+        observations = pd.DataFrame({'y': expected})
+
+        tree_out, mse = self.model._evaluate_tree_mse(tree, conditions, observations, constant_value=2)
+        self.assertEqual(tree, tree_out)
+        self.assertAlmostEqual(mse, 0.0, places=5)
+
 
 if __name__ == '__main__':
     unittest.main()
