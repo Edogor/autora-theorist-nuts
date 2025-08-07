@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 
 
 
-class ExampleRegressor(BaseEstimator):
+class NutsTheorists(BaseEstimator):
     """
     Include inline mathematics in docstring \\(x < 1\\) or $c = 3$
     or block mathematics:
