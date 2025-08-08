@@ -41,8 +41,7 @@ class NutsTheorists(BaseEstimator):
         """
         Recursively generates a single random equation tree.
         """
-        # Base Case: Stop growing the tree
-        if max_depth == 0 or random.random() < 0.3:  # Increased probability for shallower trees
+        if max_depth <= 0 or random.random() < 0.3:
             return random.choice(self.TERMINALS)
 
         # Recursive Step: Grow the tree
@@ -180,7 +179,7 @@ class NutsTheorists(BaseEstimator):
 
     def _mutate(self, tree, max_depth=3):
         """
-        Mutate a tree with proper variable handling.
+        Mutate a tree with proper depth control.
         """
         def recursive_mutate(node, depth=0):
             if not isinstance(node, list):
@@ -191,8 +190,9 @@ class NutsTheorists(BaseEstimator):
 
             # Operator or subtree mutation
             if random.random() < self.mutation_rate:
-                # Replace entire subtree
-                return self._create_random_tree(max_depth - depth)
+                # FIX: Ensure we never pass negative max_depth
+                remaining_depth = max(1, max_depth - depth)  # Always at least 1
+                return self._create_random_tree(remaining_depth)
             
             # Recursively mutate children
             mutated = [node[0]]
