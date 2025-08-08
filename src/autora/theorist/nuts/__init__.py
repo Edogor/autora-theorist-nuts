@@ -14,8 +14,8 @@ from itertools import product
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 class NutsTheorists(BaseEstimator):
-    def __init__(self, population_size=500, n_generation=20, mutation_rate=0.2, tournament_size=15,
-                 early_stopping_rounds=5, complexity_penalty=0.02, n_constants=1, verbose=True, elitism=2):
+    def __init__(self, population_size=500, n_generation=30, mutation_rate=0.2, tournament_size=20,
+                 early_stopping_rounds=5, complexity_penalty=0.02, n_constants=1, verbose=True, elitism=50, constant_grid=None):
         self.population_size = population_size
         self.n_generation = n_generation
         self.mutation_rate = mutation_rate
@@ -25,6 +25,9 @@ class NutsTheorists(BaseEstimator):
         self.n_constants = n_constants
         self.elitism = elitism
         self.verbose = verbose
+
+        # New param: grid for constant tuning
+        self.constant_grid = constant_grid or np.linspace(-3, 3.0, 20)
 
         self.UNARY_OPS = ['np.log', 'np.exp']
         self.BINARY_OPS = ['+', '-', '*', '/', 'np.power']
@@ -103,7 +106,7 @@ class NutsTheorists(BaseEstimator):
                 raise ValueError
 
         best_constants, best_mse = None, float("inf")
-        grid = np.linspace(0.1, 3.0, 5)
+        grid = np.linspace(-5, 5.0, 40)
 
         for values in product(grid, repeat=len(self.constant_names)):
             constants = dict(zip(self.constant_names, values))
@@ -166,12 +169,12 @@ class NutsTheorists(BaseEstimator):
     def generate_next_generation(self, top_k, max_depth=3):
         if len(top_k) < 2:
             return copy.deepcopy(top_k)
-        new_pop = copy.deepcopy(top_k[:self.elitism])
-        while len(new_pop) < self.population_size:
-            p1, p2 = random.sample(top_k, 2)
-            for child in self._crossover(p1, p2):
-                mutated = self._mutate(child, max_depth)
-                if self._count_symbols(mutated) <= 40:
+        new_pop = copy.deepcopy(top_k[:self.elitism])   # ← step 1: keep elite trees
+        while len(new_pop) < self.population_size:      # ← step 2: fill rest of population
+            p1, p2 = random.sample(top_k, 2)            # ← pick 2 parents from top_k
+            for child in self._crossover(p1, p2):       # ← create 2 children by swapping parts
+                mutated = self._mutate(child, max_depth)  # ← randomly mutate the child
+                if self._count_symbols(mutated) <= 40:  # ← enforce max length
                     try:
                         self._translate_tree_to_callable(self._tree_translate(mutated), self.best_c)
                         new_pop.append(mutated)
@@ -262,9 +265,10 @@ class NutsTheorists(BaseEstimator):
 
     def print_eqn(self):
         if self.best_tree:
-            eq = self._tree_translate(self.best_tree)
-            print(f"Best equation: {eq}")
-            return eq
+            raw_eq = self._tree_translate(self.best_tree)
+            prepared_eq = self._prepare_equation(raw_eq, self.best_c)
+            print(f"Best equation: {prepared_eq}")
+            return prepared_eq
         print("Model not fitted.")
         return ""
 
