@@ -15,7 +15,8 @@ warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 class NutsTheorists(BaseEstimator):
     def __init__(self, population_size=500, n_generation=30, mutation_rate=0.2, tournament_size=20,
-                 early_stopping_rounds=5, complexity_penalty=0.02, n_constants=1, verbose=True, elitism=50, constant_grid=None):
+                 early_stopping_rounds=5, complexity_penalty=0.02, n_constants=1, verbose=True, elitism=50, constant_grid=None,
+                 n_islands=1, migration_rate=0.1, migration_interval=5):
         self.population_size = population_size
         self.n_generation = n_generation
         self.mutation_rate = mutation_rate
@@ -25,6 +26,11 @@ class NutsTheorists(BaseEstimator):
         self.n_constants = n_constants
         self.elitism = elitism
         self.verbose = verbose
+        
+        # Island model parameters
+        self.n_islands = n_islands
+        self.migration_rate = migration_rate
+        self.migration_interval = migration_interval
 
         # New param: grid for constant tuning
         self.constant_grid = constant_grid or np.linspace(-3, 3.0, 20)
@@ -166,6 +172,32 @@ class NutsTheorists(BaseEstimator):
         selected = random.sample(population, min(len(population), self.tournament_size * k))
         return sorted(selected, key=lambda x: x[1])[:k]
 
+    def _migrate_between_islands(self, islands):
+        """
+        Migrate best individuals between islands.
+        Each island sends its best individuals to random other islands.
+        """
+        n_migrants = max(1, int(self.migration_rate * self.population_size / self.n_islands))
+        
+        for i in range(self.n_islands):
+            # Get best individuals from this island
+            island_pop = islands[i]
+            if len(island_pop) < n_migrants:
+                continue
+                
+            # Sort by fitness and get the best migrants
+            sorted_pop = sorted(island_pop, key=lambda x: x[1])
+            migrants = sorted_pop[:n_migrants]
+            
+            # Send migrants to a random other island
+            target_island = random.choice([j for j in range(self.n_islands) if j != i])
+            
+            # Replace worst individuals in target island with migrants
+            islands[target_island] = sorted(islands[target_island], key=lambda x: x[1])
+            islands[target_island] = islands[target_island][:-n_migrants] + migrants
+            
+        return islands
+
     def generate_next_generation(self, top_k, max_depth=3):
         if len(top_k) < 2:
             return copy.deepcopy(top_k)
@@ -194,7 +226,16 @@ class NutsTheorists(BaseEstimator):
         self.best_c = {name: 1.0 for name in self.constant_names}
         self._seen_constant_only = set()
 
-        population = [self._create_random_tree(5) for _ in range(self.population_size)]
+        # Initialize population(s)
+        if self.n_islands > 1:
+            # Island model: create separate populations for each island
+            island_pop_size = self.population_size // self.n_islands
+            islands = [[self._create_random_tree(5) for _ in range(island_pop_size)] 
+                      for _ in range(self.n_islands)]
+        else:
+            # Standard single population
+            population = [self._create_random_tree(5) for _ in range(self.population_size)]
+        
         best_overall_mse = float('inf')
         rounds_without_improvement = 0
         self.generation_log = []
@@ -205,17 +246,61 @@ class NutsTheorists(BaseEstimator):
             for gen in range(self.n_generation):
                 if self.verbose:
                     print(f"\nGeneration {gen+1}:")
+                    
                 sample_size = min(500, len(conditions))
                 sample_idx = np.random.choice(len(conditions), size=sample_size, replace=False)
                 X_sample = conditions.iloc[sample_idx]
                 y_sample = observations.iloc[sample_idx]
-                pop_scores = [self._evaluate_tree_mse(tree, X_sample, y_sample) for tree in population]
-                top_k = self._tournament(pop_scores)
-                top_k_trees = [tree for tree, _, _ in top_k]
-                if len(top_k_trees) < 2:
-                    print("Not enough individuals for crossover. Stopping early.")
-                    break
-                population = self.generate_next_generation(top_k_trees)
+                
+                if self.n_islands > 1:
+                    # Island model evolution
+                    all_pop_scores = []
+                    
+                    # Evolve each island independently
+                    for island_idx in range(self.n_islands):
+                        island_pop = islands[island_idx]
+                        pop_scores = [self._evaluate_tree_mse(tree, X_sample, y_sample) for tree in island_pop]
+                        all_pop_scores.extend(pop_scores)
+                        
+                        top_k = self._tournament(pop_scores)
+                        top_k_trees = [tree for tree, _, _ in top_k]
+                        
+                        if len(top_k_trees) < 2:
+                            if self.verbose:
+                                print(f"Island {island_idx}: Not enough individuals for crossover.")
+                            continue
+                            
+                        islands[island_idx] = self.generate_next_generation(top_k_trees)
+                    
+                    # Migration between islands
+                    if (gen + 1) % self.migration_interval == 0 and gen > 0:
+                        if self.verbose:
+                            print(f"  Migration occurring at generation {gen+1}")
+                        # Convert island populations to scored format for migration
+                        island_scores = []
+                        for island_idx in range(self.n_islands):
+                            island_pop = islands[island_idx]
+                            scores = [self._evaluate_tree_mse(tree, X_sample, y_sample) for tree in island_pop]
+                            island_scores.append(scores)
+                        
+                        island_scores = self._migrate_between_islands(island_scores)
+                        
+                        # Convert back to tree-only format
+                        for island_idx in range(self.n_islands):
+                            islands[island_idx] = [tree for tree, _, _ in island_scores[island_idx]]
+                    
+                    pop_scores = all_pop_scores
+                else:
+                    # Standard single population evolution
+                    pop_scores = [self._evaluate_tree_mse(tree, X_sample, y_sample) for tree in population]
+                    top_k = self._tournament(pop_scores)
+                    top_k_trees = [tree for tree, _, _ in top_k]
+                    
+                    if len(top_k_trees) < 2:
+                        print("Not enough individuals for crossover. Stopping early.")
+                        break
+                        
+                    population = self.generate_next_generation(top_k_trees)
 
                 valid_mses = [score for _, score, _ in pop_scores if np.isfinite(score)]
                 best_tree, best_mse, best_c = min(pop_scores, key=lambda x: x[1])
