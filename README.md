@@ -1,4 +1,61 @@
-# AutoRA Template
+# AutoRA NUTS Theorist
+
+A genetic programming theorist for AutoRA that discovers interpretable equations from data.
+
+## Features
+
+- **Genetic Programming**: Evolves mathematical expressions to fit data
+- **Island Model**: Support for multiple independent populations with different evolutionary strategies
+- **Operator Preferences**: Configure islands to prefer certain operators (unary vs binary, mutation vs crossover)
+- **Performance Tracking**: Monitor which islands perform best
+- **Extensible Design**: Easy to add new island behaviors and migration strategies
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from autora.theorist.nuts import NutsTheorists
+import pandas as pd
+import numpy as np
+
+# Create data
+X = pd.DataFrame({'x': np.linspace(0, 10, 50)})
+y = pd.DataFrame({'y': 2 * X['x'] + 1})
+
+# Standard single-population approach
+theorist = NutsTheorists(population_size=500, n_generation=30)
+theorist.fit(X, y)
+print(theorist.best_equation)
+```
+
+### Island Model
+
+Use the island model to evolve multiple populations simultaneously with different parameters:
+
+```python
+from autora.theorist.nuts import NutsTheorists, Island
+
+# Create islands with different evolutionary strategies
+islands = [
+    Island("Conservative", population_size=100, mutation_rate=0.1, elitism=20),
+    Island("Aggressive", population_size=100, mutation_rate=0.4, elitism=5),
+    Island("Balanced", population_size=100, mutation_rate=0.2, elitism=10),
+]
+
+theorist = NutsTheorists(
+    n_generation=30,
+    use_island_model=True,
+    islands=islands
+)
+
+theorist.fit(X, y)
+
+# View island performance
+theorist.print_island_summary()
+```
+
+For detailed documentation on the Island Model, see [docs/island_model.md](docs/island_model.md).
 
 ## Quickstart Guide
 
