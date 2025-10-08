@@ -10,7 +10,8 @@ This demonstrates:
 
 import numpy as np
 import pandas as pd
-from autora.theorist.nuts import NutsTheorists, Island, IslandModel
+
+from autora.theorist.nuts import Island, NutsTheorists
 
 # Set random seed for reproducibility
 np.random.seed(42)
@@ -21,11 +22,11 @@ def demo_basic_island_model():
     print("=" * 80)
     print("DEMO 1: Basic Island Model")
     print("=" * 80)
-    
+
     # Generate simple polynomial data: y = 2*x^2 + 3*x + 1
-    X = pd.DataFrame({'x': np.linspace(-5, 5, 50)})
-    y = pd.DataFrame({'y': 2 * X['x']**2 + 3 * X['x'] + 1})
-    
+    X = pd.DataFrame({"x": np.linspace(-5, 5, 50)})
+    y = pd.DataFrame({"y": 2 * X["x"] ** 2 + 3 * X["x"] + 1})
+
     # Create islands with different "cultures" (parameter settings)
     islands = [
         Island(
@@ -34,15 +35,15 @@ def demo_basic_island_model():
             mutation_rate=0.1,
             tournament_size=15,
             elitism=20,
-            operator_weights={'unary': 1.5, 'binary': 1.0, 'crossover': 1.2, 'mutation': 0.8}
+            operator_weights={"unary": 1.5, "binary": 1.0, "crossover": 1.2, "mutation": 0.8},
         ),
         Island(
-            name="Balanced", 
+            name="Balanced",
             population_size=80,
             mutation_rate=0.2,
             tournament_size=20,
             elitism=10,
-            operator_weights={'unary': 1.0, 'binary': 1.0, 'crossover': 1.0, 'mutation': 1.0}
+            operator_weights={"unary": 1.0, "binary": 1.0, "crossover": 1.0, "mutation": 1.0},
         ),
         Island(
             name="Aggressive",
@@ -50,10 +51,10 @@ def demo_basic_island_model():
             mutation_rate=0.4,
             tournament_size=25,
             elitism=5,
-            operator_weights={'unary': 0.8, 'binary': 1.5, 'crossover': 0.8, 'mutation': 1.5}
+            operator_weights={"unary": 0.8, "binary": 1.5, "crossover": 0.8, "mutation": 1.5},
         ),
     ]
-    
+
     # Create theorist with island model
     theorist = NutsTheorists(
         n_generation=10,
@@ -61,12 +62,12 @@ def demo_basic_island_model():
         use_island_model=True,
         islands=islands,
         n_constants=3,
-        early_stopping_rounds=None  # disable early stopping for demo
+        early_stopping_rounds=None,  # disable early stopping for demo
     )
-    
+
     print("\nFitting with Island Model...")
     theorist.fit(X, y)
-    
+
     print("\n" + "=" * 80)
     print("Results:")
     print("=" * 80)
@@ -80,11 +81,11 @@ def demo_custom_heuristics():
     print("\n\n" + "=" * 80)
     print("DEMO 2: Islands with Different Operator Heuristics")
     print("=" * 80)
-    
+
     # Generate exponential data: y = exp(x/2)
-    X = pd.DataFrame({'x': np.linspace(0, 3, 30)})
-    y = pd.DataFrame({'y': np.exp(X['x'] / 2)})
-    
+    X = pd.DataFrame({"x": np.linspace(0, 3, 30)})
+    y = pd.DataFrame({"y": np.exp(X["x"] / 2)})
+
     islands = [
         Island(
             name="UnaryLovers",
@@ -92,7 +93,7 @@ def demo_custom_heuristics():
             mutation_rate=0.2,
             tournament_size=20,
             elitism=10,
-            operator_weights={'unary': 3.0, 'binary': 0.5}  # Prefers unary ops like log, exp
+            operator_weights={"unary": 3.0, "binary": 0.5},  # Prefers unary ops like log, exp
         ),
         Island(
             name="BinaryFans",
@@ -100,7 +101,7 @@ def demo_custom_heuristics():
             mutation_rate=0.2,
             tournament_size=20,
             elitism=10,
-            operator_weights={'unary': 0.5, 'binary': 3.0}  # Prefers binary ops like +, *, /
+            operator_weights={"unary": 0.5, "binary": 3.0},  # Prefers binary ops like +, *, /
         ),
         Island(
             name="MutationHeavy",
@@ -108,10 +109,10 @@ def demo_custom_heuristics():
             mutation_rate=0.5,  # High mutation
             tournament_size=20,
             elitism=5,
-            operator_weights={'unary': 1.0, 'binary': 1.0, 'mutation': 2.0}
+            operator_weights={"unary": 1.0, "binary": 1.0, "mutation": 2.0},
         ),
     ]
-    
+
     theorist = NutsTheorists(
         n_generation=8,
         verbose=True,
@@ -119,10 +120,10 @@ def demo_custom_heuristics():
         islands=islands,
         n_constants=2,
     )
-    
+
     print("\nFitting with custom heuristics...")
     theorist.fit(X, y)
-    
+
     print("\nIsland Rankings:")
     rankings = theorist.island_model.get_island_rankings()
     for rank, stats in enumerate(rankings, 1):
@@ -134,18 +135,18 @@ def demo_island_statistics():
     print("\n\n" + "=" * 80)
     print("DEMO 3: Island Performance Statistics")
     print("=" * 80)
-    
+
     # Generate linear data
-    X = pd.DataFrame({'x': np.linspace(0, 10, 40)})
-    y = pd.DataFrame({'y': 5 * X['x'] - 2})
-    
+    X = pd.DataFrame({"x": np.linspace(0, 10, 40)})
+    y = pd.DataFrame({"y": 5 * X["x"] - 2})
+
     # Create diverse islands
     islands = [
         Island("Fast", population_size=50, mutation_rate=0.15, elitism=15),
         Island("Medium", population_size=70, mutation_rate=0.25, elitism=10),
         Island("Slow", population_size=90, mutation_rate=0.35, elitism=5),
     ]
-    
+
     theorist = NutsTheorists(
         n_generation=6,
         verbose=False,  # Less verbose for cleaner output
@@ -153,12 +154,12 @@ def demo_island_statistics():
         islands=islands,
         n_constants=2,
     )
-    
+
     theorist.fit(X, y)
-    
+
     # Print detailed summary
     theorist.print_island_summary()
-    
+
     # Show evolution history for each island
     print("\nIsland Evolution History:")
     for island in theorist.island_model.islands:
@@ -166,7 +167,8 @@ def demo_island_statistics():
         print(f"  Final Fitness: {island.best_fitness:.6f}")
         print(f"  Generations: {len(island.generation_history)}")
         if island.generation_history:
-            print(f"  Fitness Progression: {[f'{h['best_fitness']:.4f}' for h in island.generation_history[:5]]}")
+            fitness_vals = [f"{h['best_fitness']:.4f}" for h in island.generation_history[:5]]
+            print(f"  Fitness Progression: {fitness_vals}")
 
 
 def demo_vs_standard():
@@ -174,11 +176,11 @@ def demo_vs_standard():
     print("\n\n" + "=" * 80)
     print("DEMO 4: Island Model vs Standard Approach")
     print("=" * 80)
-    
+
     # Generate power law data
-    X = pd.DataFrame({'x': np.linspace(1, 5, 35)})
-    y = pd.DataFrame({'y': X['x'] ** 1.5})
-    
+    X = pd.DataFrame({"x": np.linspace(1, 5, 35)})
+    y = pd.DataFrame({"y": X["x"] ** 1.5})
+
     print("\n--- Standard Approach ---")
     standard = NutsTheorists(
         population_size=200,  # Same total population as island model
@@ -190,7 +192,7 @@ def demo_vs_standard():
     standard.fit(X, y)
     print(f"Best MSE: {standard.best_fitness:.6f}")
     print(f"Best Equation: {standard.best_equation}")
-    
+
     print("\n--- Island Model Approach ---")
     islands = [
         Island("Island1", population_size=50, mutation_rate=0.15),
@@ -198,7 +200,7 @@ def demo_vs_standard():
         Island("Island3", population_size=50, mutation_rate=0.35),
         Island("Island4", population_size=50, mutation_rate=0.20),
     ]
-    
+
     island_theorist = NutsTheorists(
         n_generation=6,
         verbose=False,
@@ -219,25 +221,27 @@ def demo_default_islands():
     print("=" * 80)
     print("When use_island_model=True but no islands are specified,")
     print("the system creates 4 default islands with different parameters.")
-    
-    X = pd.DataFrame({'x': np.linspace(-3, 3, 30)})
-    y = pd.DataFrame({'y': X['x'] ** 2 + 1})
-    
+
+    X = pd.DataFrame({"x": np.linspace(-3, 3, 30)})
+    y = pd.DataFrame({"y": X["x"] ** 2 + 1})
+
     theorist = NutsTheorists(
         n_generation=5,
         verbose=False,
         use_island_model=True,  # No islands specified
         n_constants=2,
     )
-    
+
     theorist.fit(X, y)
-    
+
     print(f"\nNumber of default islands created: {len(theorist.island_model.islands)}")
     print("\nDefault islands:")
     for island in theorist.island_model.islands:
-        print(f"  - {island.name}: pop={island.population_size}, "
-              f"mut_rate={island.mutation_rate}, elitism={island.elitism}")
-    
+        print(
+            f"  - {island.name}: pop={island.population_size}, "
+            f"mut_rate={island.mutation_rate}, elitism={island.elitism}"
+        )
+
     theorist.print_island_summary()
 
 
@@ -246,14 +250,14 @@ if __name__ == "__main__":
     print("╔" + "═" * 78 + "╗")
     print("║" + " " * 20 + "NUTS THEORIST - ISLAND MODEL DEMO" + " " * 25 + "║")
     print("╚" + "═" * 78 + "╝")
-    
+
     # Run all demos
     demo_basic_island_model()
     demo_custom_heuristics()
     demo_island_statistics()
     demo_vs_standard()
     demo_default_islands()
-    
+
     print("\n\n" + "=" * 80)
     print("DEMOS COMPLETE")
     print("=" * 80)
