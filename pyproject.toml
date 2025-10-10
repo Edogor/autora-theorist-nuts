@@ -25,7 +25,7 @@ dev = [
 [project.urls]
 homepage = "http://www.empiricalresearch.ai"
 repository = "https://github.com/Edogor/autora-theorist-nuts"
-documentation = "https://autoresearch.github.io/autora/"
+documentation = "https://Edogor.github.io/autora-theorist-nuts/"
 
 
 [build-system]
