@@ -1,0 +1,40 @@
+import pytest
+import pandas as pd
+import numpy as np
+from autora.theorist.nuts import NutsTheorists
+
+@pytest.fixture
+def seed():
+    """ Ensures that the results are the same each time the tests are run. """
+    import random
+    random.seed(180)
+    np.random.seed(180)
+    return
+
+def test_mse_linear_add(seed):
+    """
+    Tests the MSE calculation for a simple linear addition equation.
+    """
+    model = NutsTheorists()
+    model._init_constants_and_terminals(['S1', 'S2']) # Initialize variable names
+    
+    tree = ['+', 'S1', 'S2']
+    conditions = pd.DataFrame({'S1': [1, 2, 3], 'S2': [4, 5, 6]})
+    observations = pd.DataFrame({'y': [5, 7, 9]})
+
+    _, mse, _ = model._evaluate_tree_mse(tree, conditions, observations)
+    assert np.isclose(mse, 0.0), "MSE for perfect linear fit should be 0."
+
+def test_invalid_equation(seed):
+    """
+    Tests that an invalid equation (using an unrecognized operator) returns infinite MSE.
+    """
+    model = NutsTheorists()
+    model._init_constants_and_terminals(['S1', 'S2'])
+    
+    tree = ['invalid', 'S1', 'S2']
+    conditions = pd.DataFrame({'S1': [1], 'S2': [2]})
+    observations = pd.DataFrame({'y': [3]})
+
+    _, mse, _ = model._evaluate_tree_mse(tree, conditions, observations)
+    assert mse == float('inf'), "MSE for an invalid equation should be infinite."
