@@ -1,11 +1,22 @@
 import numpy as np
 import pandas as pd
-# Use the correct class name 'NutsTheorists'
-from autora.theorist.nuts import NutsTheorists
+import pytest
+import random
+from autora_theorist_nuts import NutsTheorists
 
-def test_theorist_smoke_test():
+@pytest.fixture
+def seed():
+    """
+    Ensures that the results are the same each time the tests are run.
+    """
+    random.seed(180)
+    np.random.seed(180)
+    return
+
+def test_theorist_smoke_test(seed):
     """
     Tests that the NutsTheorists can be instantiated, fit, and predict without errors.
+    The seed fixture ensures the genetic algorithm's random processes are deterministic.
     """
     # 1. Create a simple synthetic dataset
     X_train = pd.DataFrame({"x1": np.linspace(-5, 5, 10)})

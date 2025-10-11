@@ -1,11 +1,22 @@
 import numpy as np
 import pandas as pd
-# Use the correct class name 'NutsTheorists'
-from autora.theorist.nuts import NutsTheorists
+import pytest
+import random
+from autora_theorist_nuts import NutsTheorists
 
-def test_theorist_recovery_test():
+@pytest.fixture
+def seed():
+    """
+    Ensures that the results are the same each time the tests are run.
+    """
+    random.seed(180)
+    np.random.seed(180)
+    return
+
+def test_theorist_recovery_test(seed):
     """
     Tests that the NutsTheorists can recover a simple, known linear relationship.
+    The seed fixture ensures the results of the evolutionary search are reproducible.
     """
     # 1. Define a known ground truth: y = 2.5 * x1 + 1.5
     true_slope = 2.5
