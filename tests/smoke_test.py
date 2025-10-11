@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
-from autora.theorist.nuts import NutsRegressor
+# Use the correct class name 'NutsTheorists'
+from autora.theorist.nuts import NutsTheorists
 
 def test_theorist_smoke_test():
     """
-    Tests that the NutsRegressor can be instantiated, fit, and predict without errors.
-    This is a "smoke test" to ensure the basic mechanics are working.
+    Tests that the NutsTheorists can be instantiated, fit, and predict without errors.
     """
     # 1. Create a simple synthetic dataset
     X_train = pd.DataFrame({"x1": np.linspace(-5, 5, 10)})
@@ -14,7 +14,7 @@ def test_theorist_smoke_test():
     X_test = pd.DataFrame({"x1": np.linspace(6, 8, 5)})
 
     # 2. Instantiate the theorist with minimal parameters for a quick run
-    theorist = NutsRegressor(
+    theorist = NutsTheorists(
         population_size=10,
         n_generation=3,
         verbose=False  # Keep the test output clean
@@ -32,3 +32,4 @@ def test_theorist_smoke_test():
     # 6. Check that a valid equation string is produced
     equation = theorist.print_eqn()
     assert isinstance(equation, str), "print_eqn should return a string."
+

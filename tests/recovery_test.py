@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
-from autora.theorist.nuts import NutsRegressor
+# Use the correct class name 'NutsTheorists'
+from autora.theorist.nuts import NutsTheorists
 
 def test_theorist_recovery_test():
     """
-    Tests that the NutsRegressor can recover a simple, known linear relationship.
-    This is a more rigorous test of the theorist's discovery capability.
+    Tests that the NutsTheorists can recover a simple, known linear relationship.
     """
     # 1. Define a known ground truth: y = 2.5 * x1 + 1.5
     true_slope = 2.5
@@ -17,10 +17,10 @@ def test_theorist_recovery_test():
     y_test_true = true_slope * X_test["x1"] + true_intercept
 
     # 2. Instantiate the theorist with parameters suitable for finding this equation
-    theorist = NutsRegressor(
+    theorist = NutsTheorists(
         population_size=100,
         n_generation=15,
-        n_constants=2,  # Allow for two constants (slope and intercept)
+        n_constants=2,
         complexity_penalty=0.01,
         verbose=False
     )
@@ -32,6 +32,6 @@ def test_theorist_recovery_test():
     predictions = theorist.predict(X_test)
 
     # 5. Assert that the predictions are very close to the true values
-    # We use np.allclose to check for approximate equality, allowing for small errors.
     assert np.allclose(predictions, y_test_true.values, atol=0.1), \
         "Theorist failed to recover the linear relationship accurately."
+
