@@ -14,7 +14,6 @@ def seed():
 def test_theorist_recovery_test(seed):
     """
     Tests that the NutsTheorists can recover a simple, known linear relationship.
-    Uses smaller parameters to ensure the test runs quickly.
     """
     # 1. Define a known ground truth: y = 2.5 * x1 + 1.5
     true_slope = 2.5
@@ -25,15 +24,14 @@ def test_theorist_recovery_test(seed):
     X_test = pd.DataFrame({"x1": np.linspace(11, 15, 10)})
     y_test_true = true_slope * X_test["x1"] + true_intercept
 
-    # 2. Instantiate the theorist with smaller parameters for a quick test run
+    # 2. Instantiate the theorist with slightly larger parameters for a more robust test
     theorist = NutsTheorists(
-        population_size=50,   # Reduced from 100
-        n_generation=10,      # Reduced from 15
+        population_size=100,      # Increased from 50
+        n_generation=20,          # Increased from 10
         n_constants=2,
         complexity_penalty=0.01,
         verbose=False,
-        # Use a much smaller grid for constant tuning during tests
-        constant_grid=np.linspace(-3, 3, 10) 
+        constant_grid=np.linspace(-3, 3, 15) # Slightly larger grid
     )
 
     # 3. Fit the model to the training data
@@ -43,6 +41,7 @@ def test_theorist_recovery_test(seed):
     predictions = theorist.predict(X_test)
 
     # 5. Assert that the predictions are very close to the true values
+    # We keep a reasonable tolerance (atol=0.2)
     assert np.allclose(predictions, y_test_true.values, atol=0.2), \
         "Theorist failed to recover the linear relationship accurately."
 
