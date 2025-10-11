@@ -14,8 +14,20 @@ from itertools import product
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 class NutsTheorists(BaseEstimator):
-    def __init__(self, population_size=500, n_generation=30, mutation_rate=0.2, tournament_size=20,
-                 early_stopping_rounds=5, complexity_penalty=0.02, n_constants=1, verbose=True, elitism=50, constant_grid=None):
+    def __init__(
+        self,
+        population_size=500,
+        n_generation=30,
+        mutation_rate=0.2,
+        tournament_size=20,
+        early_stopping_rounds=5,
+        complexity_penalty=0.02,
+        n_constants=1,
+        verbose=True,
+        elitism=50,
+        constant_grid=None,
+        use_island_model=False,  # Keep this for future use or full version
+        islands=None,):
         self.population_size = population_size
         self.n_generation = n_generation
         self.mutation_rate = mutation_rate
@@ -26,12 +38,16 @@ class NutsTheorists(BaseEstimator):
         self.elitism = elitism
         self.verbose = verbose
 
-        # New param: grid for constant tuning
-        self.constant_grid = constant_grid or np.linspace(-3, 3.0, 20)
+        # CORRECTED LOGIC: Explicitly check for None
+        if constant_grid is None:
+            self.constant_grid = np.linspace(-3, 3.0, 20)
+        else:
+            self.constant_grid = constant_grid
 
-        self.UNARY_OPS = ['np.log', 'np.exp']
-        self.BINARY_OPS = ['+', '-', '*', '/', 'np.power']
+        self.UNARY_OPS = ["np.log", "np.exp"]
+        self.BINARY_OPS = ["+", "-", "*", "/", "np.power"]
         self.hall_of_fame = []
+
 
     def _init_constants_and_terminals(self, var_names):
         self.var_names = var_names
