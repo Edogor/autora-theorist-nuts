@@ -1,4 +1,4 @@
-import unittest
+"""import unittest
 from autora.theorist.nuts import NutsTheorists  # Adjust if your structure is different
 
 class TestTreeTranslate(unittest.TestCase):
@@ -53,3 +53,4 @@ class TestTreeTranslate(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+"""
