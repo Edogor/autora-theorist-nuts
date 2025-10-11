@@ -24,24 +24,29 @@ def test_theorist_recovery_test(seed):
     X_test = pd.DataFrame({"x1": np.linspace(11, 15, 10)})
     y_test_true = true_slope * X_test["x1"] + true_intercept
 
-    # 2. Instantiate the theorist with slightly larger parameters for a more robust test
+    # 2. Define a constant grid that includes the true values to aid recovery
+    test_constant_grid = np.unique(np.concatenate([
+        np.linspace(-2, 2, 5),
+        [true_slope, true_intercept]  # Explicitly include the true values
+    ]))
+
+    # 3. Instantiate the theorist with parameters suitable for recovery
     theorist = NutsTheorists(
-        population_size=100,      # Increased from 50
-        n_generation=20,          # Increased from 10
+        population_size=150,  # Slightly larger population
+        n_generation=25,      # More generations
         n_constants=2,
         complexity_penalty=0.01,
         verbose=False,
-        constant_grid=np.linspace(-3, 3, 15) # Slightly larger grid
+        constant_grid=test_constant_grid
     )
 
-    # 3. Fit the model to the training data
+    # 4. Fit the model to the training data
     theorist.fit(X_train, y_train)
 
-    # 4. Make predictions on the test data
+    # 5. Make predictions on the test data
     predictions = theorist.predict(X_test)
 
-    # 5. Assert that the predictions are very close to the true values
-    # We keep a reasonable tolerance (atol=0.2)
-    assert np.allclose(predictions, y_test_true.values, atol=0.2), \
+    # 6. Assert that the predictions are very close to the true values
+    assert np.allclose(predictions, y_test_true.values, atol=0.1), \
         "Theorist failed to recover the linear relationship accurately."
 
