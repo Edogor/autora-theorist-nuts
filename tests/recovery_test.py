@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import random
-from autora_theorist_nuts import NutsTheorists
+from src.autora.theorist.nuts import NutsTheorists
 
 @pytest.fixture
 def seed():
