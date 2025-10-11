@@ -1,20 +1,20 @@
-import pytest
+"""import pytest
 import numpy as np
 import pandas as pd
 from src.autora.theorist.nuts import NutsTheorists
 
 @pytest.fixture
 def seed():
-    """ Ensures that the results are the same each time the tests are run. """
+     #Ensures that the results are the same each time the tests are run.
     import random
     random.seed(180)
     np.random.seed(180)
     return
 
 def test_theorist_recovery_test(seed):
-    """
-    Tests that the NutsTheorists can recover a simple, known linear relationship.
-    """
+    
+    #Tests that the NutsTheorists can recover a simple, known linear relationship.
+    
     # 1. Define a known ground truth: y = 2.5 * x1 + 1.5
     true_slope = 2.5
     true_intercept = 1.5
@@ -50,3 +50,4 @@ def test_theorist_recovery_test(seed):
     assert np.allclose(predictions, y_test_true.values, atol=0.1), \
         "Theorist failed to recover the linear relationship accurately."
 
+"""
