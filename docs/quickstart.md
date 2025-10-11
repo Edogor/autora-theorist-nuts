@@ -7,11 +7,7 @@ You will need:
 *nuts is a part of the `autora` package:
 
 ```shell
-pip install -U autora["theorist-nuts"]
+python -m pip install -i https://test.pypi.org/simple --extra-index-url https://pypi.org/simple --upgrade autora-theorist-nuts
 ```
 
 
-Check your installation by running:
-```shell
-python -c "from autora.theorist.nuts import Example"
-```
