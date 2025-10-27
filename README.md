@@ -41,6 +41,50 @@ pip install -e ".[dev]"
 dependencies are vital to your package, you will have to add them to the ``pyproject.toml`` (see Step 6 of the 
 Contribution Guide).*
 
+## Island Model Feature
+
+The NutsTheorists class now supports an **island model** approach for genetic programming. This is a parallel evolutionary technique where multiple populations (islands) evolve independently with periodic migration of best individuals between islands.
+
+### Benefits
+- **Improved Diversity**: Multiple independent populations maintain genetic diversity better
+- **Parallel Exploration**: Different islands explore different solution space regions
+- **Robustness**: Helps avoid premature convergence to local optima
+- **Better Solutions**: Often finds superior equations compared to single-population models
+
+### Usage Example
+
+```python
+from autora.theorist.nuts import NutsTheorists
+
+# Standard single-population model (default)
+standard_model = NutsTheorists(n_islands=1)
+
+# Island model with 3 independent populations
+island_model = NutsTheorists(
+    n_islands=3,              # Number of islands
+    migration_rate=0.1,       # 10% of population migrates
+    migration_interval=5,     # Migration every 5 generations
+    population_size=500,      # Total population across all islands
+    n_generation=30
+)
+
+# Use the same fit/predict interface
+island_model.fit(X_train, y_train)
+predictions = island_model.predict(X_test)
+```
+
+### Benchmarking
+
+See `challenge/theorist_benchmarking.ipynb` for comprehensive benchmarks comparing the island model against the standard model on various cognitive modeling tasks. The notebook demonstrates performance differences on:
+- Steven's Power Law
+- Weber-Fechner Law  
+- Expected Value Theory
+
+Run the demo script:
+```bash
+python examples/island_model_demo.py
+```
+
 ## Contribution Guide
 
 ### Theorist
